@@ -12,6 +12,7 @@ import io.hippoject.backend.issue.dto.CreateIssueRequest;
 import io.hippoject.backend.issue.dto.IssueResponse;
 import io.hippoject.backend.issue.dto.UpdateIssueRequest;
 import io.hippoject.backend.issue.repository.IssueRepository;
+import io.hippoject.backend.notification.service.NotificationService;
 import io.hippoject.backend.project.domain.Project;
 import io.hippoject.backend.project.service.ProjectService;
 import io.hippoject.backend.sprint.domain.Sprint;
@@ -34,13 +35,15 @@ public class IssueService {
     private final CommentMapper commentMapper;
     private final SprintService sprintService;
     private final AuditEventService auditEventService;
+    private final NotificationService notificationService;
 
-    public IssueService(IssueRepository issueRepository, ProjectService projectService, CommentMapper commentMapper, SprintService sprintService, AuditEventService auditEventService) {
+    public IssueService(IssueRepository issueRepository, ProjectService projectService, CommentMapper commentMapper, SprintService sprintService, AuditEventService auditEventService, NotificationService notificationService) {
         this.issueRepository = issueRepository;
         this.projectService = projectService;
         this.commentMapper = commentMapper;
         this.sprintService = sprintService;
         this.auditEventService = auditEventService;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -67,6 +70,7 @@ public class IssueService {
 
         Issue savedIssue = issueRepository.save(issue);
         auditEventService.record(projectId, "ISSUE_CREATED", "Issue created", savedIssue.getIssueKey() + " · " + savedIssue.getTitle());
+        notificationService.notifyAssignee(savedIssue, savedIssue.getIssueKey() + " was assigned to you", actorId(jwt));
         return toResponse(savedIssue);
     }
 
@@ -97,6 +101,7 @@ public class IssueService {
     @Transactional
     public IssueResponse updateIssue(Long projectId, Long issueId, UpdateIssueRequest request) {
         Issue issue = findIssue(projectId, issueId);
+        String previousAssigneeId = issue.getAssigneeId();
         issue.setTitle(request.title().trim());
         issue.setDescription(request.description().trim());
         issue.setIssueType(request.issueType());
@@ -108,7 +113,18 @@ public class IssueService {
         issue.setLabels(normalizeLabels(request.labels()));
         issue.setUpdatedAt(Instant.now());
         auditEventService.record(projectId, "ISSUE_UPDATED", "Issue updated", issue.getIssueKey() + " moved to " + issue.getStatus());
+        if (issue.getAssigneeId() != null && !issue.getAssigneeId().equalsIgnoreCase(previousAssigneeId != null ? previousAssigneeId : "")) {
+            notificationService.notifyAssignee(issue, issue.getIssueKey() + " was assigned to you", issue.getReporterId());
+        }
         return toResponse(issue);
+    }
+
+    @Transactional
+    public void deleteIssue(Long projectId, Long issueId) {
+        Issue issue = findIssue(projectId, issueId);
+        issueRepository.findByEpicId(issueId).forEach((child) -> child.setEpic(null));
+        issueRepository.delete(issue);
+        auditEventService.record(projectId, "ISSUE_DELETED", "Issue deleted", issue.getIssueKey() + " was removed");
     }
 
     public Issue findIssue(Long projectId, Long issueId) {

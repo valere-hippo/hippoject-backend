@@ -2,6 +2,8 @@ package io.hippoject.backend.sprint.service;
 
 import io.hippoject.backend.audit.service.AuditEventService;
 import io.hippoject.backend.common.exception.NotFoundException;
+import io.hippoject.backend.issue.repository.IssueRepository;
+import io.hippoject.backend.notification.service.NotificationService;
 import io.hippoject.backend.project.domain.Project;
 import io.hippoject.backend.project.service.ProjectService;
 import io.hippoject.backend.sprint.domain.Sprint;
@@ -21,11 +23,15 @@ public class SprintService {
     private final SprintRepository sprintRepository;
     private final ProjectService projectService;
     private final AuditEventService auditEventService;
+    private final IssueRepository issueRepository;
+    private final NotificationService notificationService;
 
-    public SprintService(SprintRepository sprintRepository, ProjectService projectService, AuditEventService auditEventService) {
+    public SprintService(SprintRepository sprintRepository, ProjectService projectService, AuditEventService auditEventService, IssueRepository issueRepository, NotificationService notificationService) {
         this.sprintRepository = sprintRepository;
         this.projectService = projectService;
         this.auditEventService = auditEventService;
+        this.issueRepository = issueRepository;
+        this.notificationService = notificationService;
     }
 
     public List<SprintResponse> listSprints(Long projectId) {
@@ -62,6 +68,7 @@ public class SprintService {
         sprint.setActive(true);
         sprint.setCompletedAt(null);
         auditEventService.record(projectId, "SPRINT_STARTED", "Sprint started", sprint.getName() + " is now active");
+        notificationService.notifyProjectMembers(sprint, sprint.getName() + " started");
         return toResponse(sprint);
     }
 
@@ -71,7 +78,16 @@ public class SprintService {
         sprint.setActive(false);
         sprint.setCompletedAt(Instant.now());
         auditEventService.record(projectId, "SPRINT_COMPLETED", "Sprint completed", sprint.getName() + " was completed");
+        notificationService.notifyProjectMembers(sprint, sprint.getName() + " was completed");
         return toResponse(sprint);
+    }
+
+    @Transactional
+    public void deleteSprint(Long projectId, Long sprintId) {
+        Sprint sprint = findSprint(projectId, sprintId);
+        issueRepository.findBySprintId(sprintId).forEach((issue) -> issue.setSprint(null));
+        sprintRepository.delete(sprint);
+        auditEventService.record(projectId, "SPRINT_DELETED", "Sprint deleted", sprint.getName() + " was removed");
     }
 
     public Sprint findSprint(Long projectId, Long sprintId) {

@@ -2,9 +2,12 @@ package io.hippoject.backend.notification.service;
 
 import io.hippoject.backend.common.exception.NotFoundException;
 import io.hippoject.backend.comment.domain.Comment;
+import io.hippoject.backend.issue.domain.Issue;
 import io.hippoject.backend.notification.domain.Notification;
 import io.hippoject.backend.notification.dto.NotificationResponse;
 import io.hippoject.backend.notification.repository.NotificationRepository;
+import io.hippoject.backend.projectmember.repository.ProjectMemberRepository;
+import io.hippoject.backend.sprint.domain.Sprint;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
@@ -21,9 +24,11 @@ public class NotificationService {
     private static final Pattern MENTION_PATTERN = Pattern.compile("@([A-Za-z0-9._-]+)");
 
     private final NotificationRepository notificationRepository;
+    private final ProjectMemberRepository projectMemberRepository;
 
-    public NotificationService(NotificationRepository notificationRepository) {
+    public NotificationService(NotificationRepository notificationRepository, ProjectMemberRepository projectMemberRepository) {
         this.notificationRepository = notificationRepository;
+        this.projectMemberRepository = projectMemberRepository;
     }
 
     public List<NotificationResponse> listNotifications(Jwt jwt) {
@@ -51,6 +56,35 @@ public class NotificationService {
                         comment.getIssue().getProject().getId(),
                         comment.getIssue().getId(),
                         comment.getAuthorId() + " mentioned you on " + comment.getIssue().getIssueKey(),
+                        false,
+                        Instant.now())));
+    }
+
+    @Transactional
+    public void notifyAssignee(Issue issue, String message, String actorId) {
+        if (issue.getAssigneeId() == null || issue.getAssigneeId().isBlank() || issue.getAssigneeId().equalsIgnoreCase(actorId)) {
+            return;
+        }
+        notificationRepository.save(new Notification(
+                issue.getAssigneeId(),
+                "ASSIGNMENT",
+                issue.getProject().getId(),
+                issue.getId(),
+                message,
+                false,
+                Instant.now()));
+    }
+
+    @Transactional
+    public void notifyProjectMembers(Sprint sprint, String message) {
+        projectMemberRepository.findByProjectIdOrderByAddedAtAsc(sprint.getProject().getId()).stream()
+                .map((member) -> member.getUserId())
+                .forEach((recipientId) -> notificationRepository.save(new Notification(
+                        recipientId,
+                        "SPRINT",
+                        sprint.getProject().getId(),
+                        0L,
+                        message,
                         false,
                         Instant.now())));
     }

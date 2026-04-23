@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -48,5 +49,12 @@ public class SprintController {
     @PreAuthorize("@roleGuard.hasAnyRole(authentication, 'hippoject-admin', 'project-admin', 'project-manager')")
     public SprintResponse completeSprint(@PathVariable Long projectId, @PathVariable Long sprintId) {
         return sprintService.completeSprint(projectId, sprintId);
+    }
+
+    @DeleteMapping("/{sprintId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("@roleGuard.hasAnyRole(authentication, 'hippoject-admin', 'project-admin', 'project-manager')")
+    public void deleteSprint(@PathVariable Long projectId, @PathVariable Long sprintId) {
+        sprintService.deleteSprint(projectId, sprintId);
     }
 }

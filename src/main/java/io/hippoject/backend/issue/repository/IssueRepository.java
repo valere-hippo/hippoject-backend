@@ -29,4 +29,8 @@ public interface IssueRepository extends JpaRepository<Issue, Long> {
     long countByEpicId(Long epicId);
 
     long countByEpicIdAndStatus(Long epicId, IssueStatus status);
+
+    List<Issue> findByEpicId(Long epicId);
+
+    List<Issue> findBySprintId(Long sprintId);
 }
