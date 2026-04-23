@@ -64,6 +64,10 @@ public class Issue {
     @JoinColumn(name = "sprint_id")
     private Sprint sprint;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "epic_issue_id")
+    private Issue epic;
+
     @Column(nullable = false, length = 120)
     private String reporterId;
 
@@ -94,6 +98,7 @@ public class Issue {
             IssueType issueType,
             String assigneeId,
             Sprint sprint,
+            Issue epic,
             String reporterId,
             Instant createdAt,
             Instant updatedAt,
@@ -107,6 +112,7 @@ public class Issue {
         this.issueType = issueType;
         this.assigneeId = assigneeId;
         this.sprint = sprint;
+        this.epic = epic;
         this.reporterId = reporterId;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
@@ -179,6 +185,14 @@ public class Issue {
 
     public void setSprint(Sprint sprint) {
         this.sprint = sprint;
+    }
+
+    public Issue getEpic() {
+        return epic;
+    }
+
+    public void setEpic(Issue epic) {
+        this.epic = epic;
     }
 
     public String getReporterId() {

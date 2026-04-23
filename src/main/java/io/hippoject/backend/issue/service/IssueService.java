@@ -44,6 +44,7 @@ public class IssueService {
         Project project = projectService.findProject(projectId);
         Instant now = Instant.now();
         Sprint sprint = sprintService.resolveSprint(projectId, request.sprintId());
+        Issue epic = request.issueType() == IssueType.EPIC ? null : resolveEpic(projectId, request.epicId());
         Issue issue = new Issue(
                 project,
                 nextIssueKey(project),
@@ -54,6 +55,7 @@ public class IssueService {
                 request.priority(),
                 trimToNull(request.assigneeId()),
                 sprint,
+                epic,
                 actorId(jwt),
                 now,
                 now,
@@ -94,6 +96,7 @@ public class IssueService {
         issue.setPriority(request.priority());
         issue.setAssigneeId(trimToNull(request.assigneeId()));
         issue.setSprint(sprintService.resolveSprint(projectId, request.sprintId()));
+        issue.setEpic(request.issueType() == IssueType.EPIC ? null : resolveEpic(projectId, request.epicId()));
         issue.setLabels(normalizeLabels(request.labels()));
         issue.setUpdatedAt(Instant.now());
         return toResponse(issue);
@@ -122,6 +125,9 @@ public class IssueService {
                 issue.getPriority(),
                 issue.getSprint() != null ? issue.getSprint().getId() : null,
                 issue.getSprint() != null ? issue.getSprint().getName() : null,
+                issue.getEpic() != null ? issue.getEpic().getId() : null,
+                issue.getEpic() != null ? issue.getEpic().getIssueKey() : null,
+                issue.getEpic() != null ? issue.getEpic().getTitle() : null,
                 issue.getLabels(),
                 issue.getAssigneeId(),
                 issue.getReporterId(),
@@ -172,5 +178,16 @@ public class IssueService {
                 .map(String::trim)
                 .limit(10)
                 .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+    }
+
+    private Issue resolveEpic(Long projectId, Long epicId) {
+        if (epicId == null) {
+            return null;
+        }
+        Issue epic = findIssue(projectId, epicId);
+        if (epic.getIssueType() != IssueType.EPIC) {
+            throw new NotFoundException("Epic not found: " + epicId + " in project " + projectId);
+        }
+        return epic;
     }
 }

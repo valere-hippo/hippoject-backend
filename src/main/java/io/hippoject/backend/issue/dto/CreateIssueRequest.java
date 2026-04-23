@@ -21,6 +21,7 @@ public record CreateIssueRequest(
         IssuePriority priority,
         IssueStatus status,
         Long sprintId,
+        Long epicId,
         Set<String> labels,
         @Size(max = 120, message = "Assignee id must be at most 120 characters")
         String assigneeId) {

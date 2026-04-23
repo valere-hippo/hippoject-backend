@@ -22,6 +22,7 @@ public record UpdateIssueRequest(
         @NotNull(message = "Issue priority is required")
         IssuePriority priority,
         Long sprintId,
+        Long epicId,
         Set<String> labels,
         @Size(max = 120, message = "Assignee id must be at most 120 characters")
         String assigneeId) {
