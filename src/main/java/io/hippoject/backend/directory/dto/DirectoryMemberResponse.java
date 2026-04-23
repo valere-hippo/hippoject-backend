@@ -6,5 +6,6 @@ public record DirectoryMemberResponse(
         Long id,
         String userId,
         String displayName,
+        String email,
         ProjectRole role) {
 }

@@ -46,7 +46,7 @@ public class ProjectService {
                 actorId,
                 Instant.now());
         Project savedProject = projectRepository.save(project);
-        ProjectMember ownerMember = new ProjectMember(savedProject, actorId, actorId, ProjectRole.PROJECT_ADMIN, Instant.now());
+        ProjectMember ownerMember = new ProjectMember(savedProject, actorId, actorId, null, ProjectRole.PROJECT_ADMIN, Instant.now());
         savedProject.getMembers().add(ownerMember);
         projectMemberRepository.save(ownerMember);
         auditEventService.record(savedProject.getId(), "PROJECT_CREATED", "Project created", savedProject.getName() + " was created by " + actorId);

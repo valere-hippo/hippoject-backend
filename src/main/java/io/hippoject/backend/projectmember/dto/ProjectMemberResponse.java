@@ -8,6 +8,7 @@ public record ProjectMemberResponse(
         Long projectId,
         String userId,
         String displayName,
+        String email,
         ProjectRole role,
         Instant addedAt) {
 }

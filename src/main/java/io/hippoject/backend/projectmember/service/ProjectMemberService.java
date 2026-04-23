@@ -47,6 +47,7 @@ public class ProjectMemberService {
                 project,
                 userId,
                 request.displayName().trim(),
+                trimToNull(request.email()),
                 request.role(),
                 Instant.now());
         ProjectMember savedMember = projectMemberRepository.save(member);
@@ -68,7 +69,15 @@ public class ProjectMemberService {
                 member.getProject().getId(),
                 member.getUserId(),
                 member.getDisplayName(),
+                member.getEmail(),
                 member.getRole(),
                 member.getAddedAt());
+    }
+
+    private String trimToNull(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
     }
 }

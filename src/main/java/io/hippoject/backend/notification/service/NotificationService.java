@@ -25,10 +25,12 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final ProjectMemberRepository projectMemberRepository;
+    private final EmailNotificationService emailNotificationService;
 
-    public NotificationService(NotificationRepository notificationRepository, ProjectMemberRepository projectMemberRepository) {
+    public NotificationService(NotificationRepository notificationRepository, ProjectMemberRepository projectMemberRepository, EmailNotificationService emailNotificationService) {
         this.notificationRepository = notificationRepository;
         this.projectMemberRepository = projectMemberRepository;
+        this.emailNotificationService = emailNotificationService;
     }
 
     public List<NotificationResponse> listNotifications(Jwt jwt) {
@@ -50,14 +52,13 @@ public class NotificationService {
         Set<String> mentions = extractMentions(comment.getBody());
         mentions.stream()
                 .filter((recipientId) -> !recipientId.equalsIgnoreCase(comment.getAuthorId()))
-                .forEach((recipientId) -> notificationRepository.save(new Notification(
+                .forEach((recipientId) -> saveAndDispatch(
                         recipientId,
                         "MENTION",
                         comment.getIssue().getProject().getId(),
                         comment.getIssue().getId(),
                         comment.getAuthorId() + " mentioned you on " + comment.getIssue().getIssueKey(),
-                        false,
-                        Instant.now())));
+                        buildIssueUrl(comment.getIssue().getProject().getId(), comment.getIssue().getId())));
     }
 
     @Transactional
@@ -65,28 +66,36 @@ public class NotificationService {
         if (issue.getAssigneeId() == null || issue.getAssigneeId().isBlank() || issue.getAssigneeId().equalsIgnoreCase(actorId)) {
             return;
         }
-        notificationRepository.save(new Notification(
+        saveAndDispatch(
                 issue.getAssigneeId(),
                 "ASSIGNMENT",
                 issue.getProject().getId(),
                 issue.getId(),
                 message,
-                false,
-                Instant.now()));
+                buildIssueUrl(issue.getProject().getId(), issue.getId()));
     }
 
     @Transactional
     public void notifyProjectMembers(Sprint sprint, String message) {
         projectMemberRepository.findByProjectIdOrderByAddedAtAsc(sprint.getProject().getId()).stream()
-                .map((member) -> member.getUserId())
-                .forEach((recipientId) -> notificationRepository.save(new Notification(
-                        recipientId,
+                .forEach((member) -> saveAndDispatch(
+                        member.getUserId(),
                         "SPRINT",
                         sprint.getProject().getId(),
                         0L,
                         message,
-                        false,
-                        Instant.now())));
+                        "/projects/" + sprint.getProject().getId() + "/backlog"));
+    }
+
+    private void saveAndDispatch(String recipientId, String type, Long projectId, Long issueId, String message, String link) {
+        notificationRepository.save(new Notification(recipientId, type, projectId, issueId, message, false, Instant.now()));
+        projectMemberRepository.findByProjectIdAndUserIdIgnoreCase(projectId, recipientId)
+                .map((member) -> member.getEmail())
+                .ifPresent((email) -> emailNotificationService.send(email, "Hippoject notification", message + "\n\nOpen: " + link));
+    }
+
+    private String buildIssueUrl(Long projectId, Long issueId) {
+        return "/projects/" + projectId + "/issues/" + issueId;
     }
 
     private Set<String> extractMentions(String body) {

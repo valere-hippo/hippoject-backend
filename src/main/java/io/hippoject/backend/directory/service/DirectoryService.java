@@ -28,6 +28,7 @@ public class DirectoryService {
                                         member.getId(),
                                         member.getUserId(),
                                         member.getDisplayName(),
+                                        member.getEmail(),
                                         member.getRole()))
                                 .toList()))
                 .toList();

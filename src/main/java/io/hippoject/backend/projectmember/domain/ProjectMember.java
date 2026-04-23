@@ -32,6 +32,9 @@ public class ProjectMember {
     @Column(nullable = false, length = 120)
     private String displayName;
 
+    @Column(length = 160)
+    private String email;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 40)
     private ProjectRole role;
@@ -42,10 +45,11 @@ public class ProjectMember {
     protected ProjectMember() {
     }
 
-    public ProjectMember(Project project, String userId, String displayName, ProjectRole role, Instant addedAt) {
+    public ProjectMember(Project project, String userId, String displayName, String email, ProjectRole role, Instant addedAt) {
         this.project = project;
         this.userId = userId;
         this.displayName = displayName;
+        this.email = email;
         this.role = role;
         this.addedAt = addedAt;
     }
@@ -64,6 +68,10 @@ public class ProjectMember {
 
     public String getDisplayName() {
         return displayName;
+    }
+
+    public String getEmail() {
+        return email;
     }
 
     public ProjectRole getRole() {
