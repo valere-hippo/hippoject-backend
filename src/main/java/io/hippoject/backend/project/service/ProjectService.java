@@ -66,6 +66,12 @@ public class ProjectService {
     }
 
     private String actorId(Jwt jwt) {
-        return jwt.getSubject() != null ? jwt.getSubject() : jwt.getClaimAsString("preferred_username");
+        if (jwt == null) {
+            return "local-dev";
+        }
+        if (jwt.getClaimAsString("preferred_username") != null) {
+            return jwt.getClaimAsString("preferred_username");
+        }
+        return jwt.getSubject() != null ? jwt.getSubject() : "local-dev";
     }
 }

@@ -57,6 +57,12 @@ public class IssueService {
                 .toList();
     }
 
+    public List<IssueResponse> listAllIssues() {
+        return issueRepository.findAllByOrderByUpdatedAtDesc().stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
     public IssueResponse getIssue(Long projectId, Long issueId) {
         return toResponse(findIssue(projectId, issueId));
     }
@@ -106,7 +112,13 @@ public class IssueService {
     }
 
     private String actorId(Jwt jwt) {
-        return jwt.getSubject() != null ? jwt.getSubject() : jwt.getClaimAsString("preferred_username");
+        if (jwt == null) {
+            return "local-dev";
+        }
+        if (jwt.getClaimAsString("preferred_username") != null) {
+            return jwt.getClaimAsString("preferred_username");
+        }
+        return jwt.getSubject() != null ? jwt.getSubject() : "local-dev";
     }
 
     private String trimToNull(String value) {

@@ -9,6 +9,8 @@ public interface IssueRepository extends JpaRepository<Issue, Long> {
 
     List<Issue> findByProjectIdOrderByCreatedAtDesc(Long projectId);
 
+    List<Issue> findAllByOrderByUpdatedAtDesc();
+
     Optional<Issue> findByProjectIdAndId(Long projectId, Long id);
 
     long countByProjectId(Long projectId);
