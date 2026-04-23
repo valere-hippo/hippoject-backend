@@ -4,6 +4,7 @@ import io.hippoject.backend.common.exception.NotFoundException;
 import io.hippoject.backend.project.domain.Project;
 import io.hippoject.backend.project.service.ProjectService;
 import io.hippoject.backend.sprint.domain.Sprint;
+import io.hippoject.backend.sprint.domain.SprintStatus;
 import io.hippoject.backend.sprint.dto.CreateSprintRequest;
 import io.hippoject.backend.sprint.dto.SprintResponse;
 import io.hippoject.backend.sprint.repository.SprintRepository;
@@ -44,8 +45,26 @@ public class SprintService {
                 request.startsAt(),
                 request.endsAt(),
                 request.active(),
-                Instant.now());
+                Instant.now(),
+                null);
         return toResponse(sprintRepository.save(sprint));
+    }
+
+    @Transactional
+    public SprintResponse startSprint(Long projectId, Long sprintId) {
+        Sprint sprint = findSprint(projectId, sprintId);
+        deactivateActiveSprints(projectId);
+        sprint.setActive(true);
+        sprint.setCompletedAt(null);
+        return toResponse(sprint);
+    }
+
+    @Transactional
+    public SprintResponse completeSprint(Long projectId, Long sprintId) {
+        Sprint sprint = findSprint(projectId, sprintId);
+        sprint.setActive(false);
+        sprint.setCompletedAt(Instant.now());
+        return toResponse(sprint);
     }
 
     public Sprint findSprint(Long projectId, Long sprintId) {
@@ -74,8 +93,17 @@ public class SprintService {
                 sprint.getGoal(),
                 sprint.getStartsAt(),
                 sprint.getEndsAt(),
+                determineStatus(sprint),
                 sprint.isActive(),
+                sprint.getCompletedAt(),
                 sprint.getCreatedAt(),
                 sprint.getIssues().size());
+    }
+
+    private SprintStatus determineStatus(Sprint sprint) {
+        if (sprint.getCompletedAt() != null) {
+            return SprintStatus.COMPLETED;
+        }
+        return sprint.isActive() ? SprintStatus.ACTIVE : SprintStatus.PLANNED;
     }
 }

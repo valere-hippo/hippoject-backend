@@ -45,6 +45,9 @@ public class Sprint {
     @Column(nullable = false)
     private boolean active;
 
+    @Column
+    private Instant completedAt;
+
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -53,7 +56,7 @@ public class Sprint {
 
     protected Sprint() {}
 
-    public Sprint(Project project, String name, String goal, LocalDate startsAt, LocalDate endsAt, boolean active, Instant createdAt) {
+    public Sprint(Project project, String name, String goal, LocalDate startsAt, LocalDate endsAt, boolean active, Instant createdAt, Instant completedAt) {
         this.project = project;
         this.name = name;
         this.goal = goal;
@@ -61,6 +64,7 @@ public class Sprint {
         this.endsAt = endsAt;
         this.active = active;
         this.createdAt = createdAt;
+        this.completedAt = completedAt;
     }
 
     public Long getId() {
@@ -93,6 +97,14 @@ public class Sprint {
 
     public void setActive(boolean active) {
         this.active = active;
+    }
+
+    public Instant getCompletedAt() {
+        return completedAt;
+    }
+
+    public void setCompletedAt(Instant completedAt) {
+        this.completedAt = completedAt;
     }
 
     public Instant getCreatedAt() {
