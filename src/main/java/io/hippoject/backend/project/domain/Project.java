@@ -38,6 +38,9 @@ public class Project {
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
 
+    @Column
+    private Instant deletedAt;
+
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Issue> issues = new ArrayList<>();
 
@@ -93,6 +96,14 @@ public class Project {
 
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public Instant getDeletedAt() {
+        return deletedAt;
+    }
+
+    public void setDeletedAt(Instant deletedAt) {
+        this.deletedAt = deletedAt;
     }
 
     public List<Issue> getIssues() {

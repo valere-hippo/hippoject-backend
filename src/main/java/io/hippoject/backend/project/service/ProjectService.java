@@ -53,8 +53,9 @@ public class ProjectService {
         return toResponse(savedProject);
     }
 
-    public List<ProjectResponse> listProjects() {
+    public List<ProjectResponse> listProjects(boolean includeArchived) {
         return projectRepository.findAll().stream()
+                .filter((project) -> includeArchived || project.getDeletedAt() == null)
                 .map(this::toResponse)
                 .toList();
     }
@@ -72,7 +73,31 @@ public class ProjectService {
         return toResponse(project);
     }
 
+    @Transactional
+    public ProjectResponse archiveProject(Long projectId) {
+        Project project = findProject(projectId);
+        project.setDeletedAt(Instant.now());
+        auditEventService.record(project.getId(), "PROJECT_ARCHIVED", "Project archived", project.getName() + " was archived");
+        return toResponse(project);
+    }
+
+    @Transactional
+    public ProjectResponse restoreProject(Long projectId) {
+        Project project = findProjectIncludingArchived(projectId);
+        project.setDeletedAt(null);
+        auditEventService.record(project.getId(), "PROJECT_RESTORED", "Project restored", project.getName() + " was restored");
+        return toResponse(project);
+    }
+
     public Project findProject(Long projectId) {
+        Project project = findProjectIncludingArchived(projectId);
+        if (project.getDeletedAt() != null) {
+            throw new NotFoundException("Project not found: " + projectId);
+        }
+        return project;
+    }
+
+    public Project findProjectIncludingArchived(Long projectId) {
         return projectRepository.findById(projectId)
                 .orElseThrow(() -> new NotFoundException("Project not found: " + projectId));
     }
@@ -85,6 +110,7 @@ public class ProjectService {
                 project.getDescription(),
                 project.getOwnerId(),
                 project.getCreatedAt(),
+                project.getDeletedAt(),
                 project.getIssues().size(),
                 project.getMembers().size());
     }

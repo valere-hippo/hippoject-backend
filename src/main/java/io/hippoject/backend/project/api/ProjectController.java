@@ -12,9 +12,11 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -37,8 +39,8 @@ public class ProjectController {
     }
 
     @GetMapping
-    public List<ProjectResponse> listProjects() {
-        return projectService.listProjects();
+    public List<ProjectResponse> listProjects(@RequestParam(defaultValue = "false") boolean includeArchived) {
+        return projectService.listProjects(includeArchived);
     }
 
     @GetMapping("/{projectId}")
@@ -50,5 +52,17 @@ public class ProjectController {
     @PreAuthorize("@roleGuard.hasAnyRole(authentication, 'hippoject-admin', 'project-admin', 'project-manager')")
     public ProjectResponse updateProject(@PathVariable Long projectId, @Valid @RequestBody UpdateProjectRequest request) {
         return projectService.updateProject(projectId, request);
+    }
+
+    @DeleteMapping("/{projectId}")
+    @PreAuthorize("@roleGuard.hasAnyRole(authentication, 'hippoject-admin', 'project-admin', 'project-manager')")
+    public ProjectResponse archiveProject(@PathVariable Long projectId) {
+        return projectService.archiveProject(projectId);
+    }
+
+    @PutMapping("/{projectId}/restore")
+    @PreAuthorize("@roleGuard.hasAnyRole(authentication, 'hippoject-admin', 'project-admin', 'project-manager')")
+    public ProjectResponse restoreProject(@PathVariable Long projectId) {
+        return projectService.restoreProject(projectId);
     }
 }
