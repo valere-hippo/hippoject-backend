@@ -1,5 +1,6 @@
 package io.hippoject.backend.filter.service;
 
+import io.hippoject.backend.common.exception.NotFoundException;
 import io.hippoject.backend.filter.domain.SavedFilter;
 import io.hippoject.backend.filter.dto.CreateSavedFilterRequest;
 import io.hippoject.backend.filter.dto.SavedFilterResponse;
@@ -40,6 +41,13 @@ public class SavedFilterService {
                 trimToNull(request.label()),
                 Instant.now());
         return toResponse(savedFilterRepository.save(savedFilter));
+    }
+
+    @Transactional
+    public void deleteSavedFilter(Long filterId, Jwt jwt) {
+        SavedFilter savedFilter = savedFilterRepository.findByIdAndOwnerId(filterId, actorId(jwt))
+                .orElseThrow(() -> new NotFoundException("Saved filter not found: " + filterId));
+        savedFilterRepository.delete(savedFilter);
     }
 
     private SavedFilterResponse toResponse(SavedFilter savedFilter) {

@@ -2,6 +2,7 @@ package io.hippoject.backend.projectmember.service;
 
 import io.hippoject.backend.audit.service.AuditEventService;
 import io.hippoject.backend.common.exception.ConflictException;
+import io.hippoject.backend.common.exception.NotFoundException;
 import io.hippoject.backend.project.domain.Project;
 import io.hippoject.backend.project.service.ProjectService;
 import io.hippoject.backend.projectmember.domain.ProjectMember;
@@ -51,6 +52,14 @@ public class ProjectMemberService {
         ProjectMember savedMember = projectMemberRepository.save(member);
         auditEventService.record(projectId, "MEMBER_ADDED", "Member added", savedMember.getDisplayName() + " joined as " + savedMember.getRole());
         return toResponse(savedMember);
+    }
+
+    @Transactional
+    public void removeMember(Long projectId, Long memberId) {
+        ProjectMember member = projectMemberRepository.findByProjectIdAndId(projectId, memberId)
+                .orElseThrow(() -> new NotFoundException("Project member not found: " + memberId + " in project " + projectId));
+        auditEventService.record(projectId, "MEMBER_REMOVED", "Member removed", member.getDisplayName() + " was removed from the project");
+        projectMemberRepository.delete(member);
     }
 
     private ProjectMemberResponse toResponse(ProjectMember member) {

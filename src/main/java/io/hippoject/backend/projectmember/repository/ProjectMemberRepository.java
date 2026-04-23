@@ -10,4 +10,6 @@ public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Lo
     List<ProjectMember> findByProjectIdOrderByAddedAtAsc(Long projectId);
 
     Optional<ProjectMember> findByProjectIdAndUserIdIgnoreCase(Long projectId, String userId);
+
+    Optional<ProjectMember> findByProjectIdAndId(Long projectId, Long id);
 }
