@@ -19,6 +19,7 @@ public class DirectoryService {
 
     public List<DirectoryProjectResponse> getDirectory() {
         return projectRepository.findAll().stream()
+                .filter((project) -> project.getDeletedAt() == null)
                 .map((project) -> new DirectoryProjectResponse(
                         project.getId(),
                         project.getKey(),

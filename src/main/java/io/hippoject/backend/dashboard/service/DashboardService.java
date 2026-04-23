@@ -26,12 +26,16 @@ public class DashboardService {
     }
 
     public DashboardSummaryResponse getSummary() {
+        var activeProjects = projectRepository.findAll().stream()
+                .filter((project) -> project.getDeletedAt() == null)
+                .toList();
+
         return new DashboardSummaryResponse(
-                projectRepository.count(),
-                issueRepository.countByStatusNot(IssueStatus.DONE),
-                issueRepository.countByStatusIn(List.of(IssueStatus.IN_PROGRESS, IssueStatus.IN_REVIEW)),
-                issueRepository.countByPriority(IssuePriority.CRITICAL),
-                sprintRepository.countByActiveTrue(),
-                issueRepository.countByIssueType(IssueType.EPIC));
+                activeProjects.size(),
+                activeProjects.stream().flatMap((project) -> project.getIssues().stream()).filter((issue) -> issue.getDeletedAt() == null && issue.getStatus() != IssueStatus.DONE).count(),
+                activeProjects.stream().flatMap((project) -> project.getIssues().stream()).filter((issue) -> issue.getDeletedAt() == null && List.of(IssueStatus.IN_PROGRESS, IssueStatus.IN_REVIEW).contains(issue.getStatus())).count(),
+                activeProjects.stream().flatMap((project) -> project.getIssues().stream()).filter((issue) -> issue.getDeletedAt() == null && issue.getPriority() == IssuePriority.CRITICAL).count(),
+                activeProjects.stream().flatMap((project) -> project.getIssues().stream()).map((issue) -> issue.getSprint()).filter((sprint) -> sprint != null && sprint.getDeletedAt() == null && sprint.isActive()).map((sprint) -> sprint.getId()).distinct().count(),
+                activeProjects.stream().flatMap((project) -> project.getIssues().stream()).filter((issue) -> issue.getDeletedAt() == null && issue.getIssueType() == IssueType.EPIC).count());
     }
 }
