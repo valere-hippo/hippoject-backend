@@ -29,7 +29,8 @@ public class IssueQueryController {
             @RequestParam(required = false) IssueType issueType,
             @RequestParam(required = false) IssuePriority priority,
             @RequestParam(required = false) String assigneeId,
-            @RequestParam(required = false) String label) {
-        return issueService.listAllIssues(query, projectId, status, issueType, priority, assigneeId, label);
+            @RequestParam(required = false) String label,
+            @RequestParam(defaultValue = "false") boolean includeArchived) {
+        return issueService.listAllIssues(query, projectId, status, issueType, priority, assigneeId, label, includeArchived);
     }
 }

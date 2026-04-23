@@ -34,10 +34,10 @@ public class SprintService {
         this.notificationService = notificationService;
     }
 
-    public List<SprintResponse> listSprints(Long projectId) {
+    public List<SprintResponse> listSprints(Long projectId, boolean includeArchived) {
         projectService.findProject(projectId);
         return sprintRepository.findByProjectIdOrderByStartsAtDesc(projectId).stream()
-                .filter((sprint) -> sprint.getDeletedAt() == null)
+                .filter((sprint) -> includeArchived || sprint.getDeletedAt() == null)
                 .map(this::toResponse)
                 .toList();
     }

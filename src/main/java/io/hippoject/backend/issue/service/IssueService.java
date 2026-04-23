@@ -74,17 +74,17 @@ public class IssueService {
         return toResponse(savedIssue);
     }
 
-    public List<IssueResponse> listIssues(Long projectId) {
+    public List<IssueResponse> listIssues(Long projectId, boolean includeArchived) {
         projectService.findProject(projectId);
         return issueRepository.findByProjectIdOrderByCreatedAtDesc(projectId).stream()
-                .filter((issue) -> issue.getDeletedAt() == null)
+                .filter((issue) -> includeArchived || issue.getDeletedAt() == null)
                 .map(this::toResponse)
                 .toList();
     }
 
-    public List<IssueResponse> listAllIssues(String query, Long projectId, IssueStatus status, IssueType issueType, IssuePriority priority, String assigneeId, String label) {
+    public List<IssueResponse> listAllIssues(String query, Long projectId, IssueStatus status, IssueType issueType, IssuePriority priority, String assigneeId, String label, boolean includeArchived) {
         return issueRepository.findAllByOrderByUpdatedAtDesc().stream()
-                .filter((issue) -> issue.getDeletedAt() == null)
+                .filter((issue) -> includeArchived || issue.getDeletedAt() == null)
                 .filter((issue) -> projectId == null || issue.getProject().getId().equals(projectId))
                 .filter((issue) -> status == null || issue.getStatus() == status)
                 .filter((issue) -> issueType == null || issue.getIssueType() == issueType)
