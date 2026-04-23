@@ -1,5 +1,6 @@
 package io.hippoject.backend.sprint.service;
 
+import io.hippoject.backend.audit.service.AuditEventService;
 import io.hippoject.backend.common.exception.NotFoundException;
 import io.hippoject.backend.project.domain.Project;
 import io.hippoject.backend.project.service.ProjectService;
@@ -19,10 +20,12 @@ public class SprintService {
 
     private final SprintRepository sprintRepository;
     private final ProjectService projectService;
+    private final AuditEventService auditEventService;
 
-    public SprintService(SprintRepository sprintRepository, ProjectService projectService) {
+    public SprintService(SprintRepository sprintRepository, ProjectService projectService, AuditEventService auditEventService) {
         this.sprintRepository = sprintRepository;
         this.projectService = projectService;
+        this.auditEventService = auditEventService;
     }
 
     public List<SprintResponse> listSprints(Long projectId) {
@@ -47,7 +50,9 @@ public class SprintService {
                 request.active(),
                 Instant.now(),
                 null);
-        return toResponse(sprintRepository.save(sprint));
+        Sprint savedSprint = sprintRepository.save(sprint);
+        auditEventService.record(projectId, "SPRINT_CREATED", "Sprint created", savedSprint.getName() + " was planned");
+        return toResponse(savedSprint);
     }
 
     @Transactional
@@ -56,6 +61,7 @@ public class SprintService {
         deactivateActiveSprints(projectId);
         sprint.setActive(true);
         sprint.setCompletedAt(null);
+        auditEventService.record(projectId, "SPRINT_STARTED", "Sprint started", sprint.getName() + " is now active");
         return toResponse(sprint);
     }
 
@@ -64,6 +70,7 @@ public class SprintService {
         Sprint sprint = findSprint(projectId, sprintId);
         sprint.setActive(false);
         sprint.setCompletedAt(Instant.now());
+        auditEventService.record(projectId, "SPRINT_COMPLETED", "Sprint completed", sprint.getName() + " was completed");
         return toResponse(sprint);
     }
 

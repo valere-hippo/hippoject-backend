@@ -1,5 +1,6 @@
 package io.hippoject.backend.comment.service;
 
+import io.hippoject.backend.audit.service.AuditEventService;
 import io.hippoject.backend.comment.domain.Comment;
 import io.hippoject.backend.comment.dto.CommentResponse;
 import io.hippoject.backend.comment.dto.CreateCommentRequest;
@@ -21,12 +22,14 @@ public class CommentService {
     private final IssueService issueService;
     private final CommentMapper commentMapper;
     private final NotificationService notificationService;
+    private final AuditEventService auditEventService;
 
-    public CommentService(CommentRepository commentRepository, IssueService issueService, CommentMapper commentMapper, NotificationService notificationService) {
+    public CommentService(CommentRepository commentRepository, IssueService issueService, CommentMapper commentMapper, NotificationService notificationService, AuditEventService auditEventService) {
         this.commentRepository = commentRepository;
         this.issueService = issueService;
         this.commentMapper = commentMapper;
         this.notificationService = notificationService;
+        this.auditEventService = auditEventService;
     }
 
     public List<CommentResponse> listComments(Long projectId, Long issueId) {
@@ -42,6 +45,7 @@ public class CommentService {
         Comment comment = new Comment(issue, request.body().trim(), actorId(jwt), Instant.now());
         Comment savedComment = commentRepository.save(comment);
         notificationService.createMentionNotifications(savedComment);
+        auditEventService.record(projectId, "COMMENT_ADDED", "Comment added", savedComment.getAuthorId() + " commented on " + issue.getIssueKey());
         return commentMapper.toResponse(savedComment);
     }
 

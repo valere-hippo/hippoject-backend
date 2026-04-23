@@ -1,5 +1,6 @@
 package io.hippoject.backend.issue.service;
 
+import io.hippoject.backend.audit.service.AuditEventService;
 import io.hippoject.backend.comment.dto.CommentResponse;
 import io.hippoject.backend.comment.service.CommentMapper;
 import io.hippoject.backend.common.exception.NotFoundException;
@@ -32,12 +33,14 @@ public class IssueService {
     private final ProjectService projectService;
     private final CommentMapper commentMapper;
     private final SprintService sprintService;
+    private final AuditEventService auditEventService;
 
-    public IssueService(IssueRepository issueRepository, ProjectService projectService, CommentMapper commentMapper, SprintService sprintService) {
+    public IssueService(IssueRepository issueRepository, ProjectService projectService, CommentMapper commentMapper, SprintService sprintService, AuditEventService auditEventService) {
         this.issueRepository = issueRepository;
         this.projectService = projectService;
         this.commentMapper = commentMapper;
         this.sprintService = sprintService;
+        this.auditEventService = auditEventService;
     }
 
     @Transactional
@@ -62,7 +65,9 @@ public class IssueService {
                 now,
                 normalizeLabels(request.labels()));
 
-        return toResponse(issueRepository.save(issue));
+        Issue savedIssue = issueRepository.save(issue);
+        auditEventService.record(projectId, "ISSUE_CREATED", "Issue created", savedIssue.getIssueKey() + " · " + savedIssue.getTitle());
+        return toResponse(savedIssue);
     }
 
     public List<IssueResponse> listIssues(Long projectId) {
@@ -102,6 +107,7 @@ public class IssueService {
         issue.setEpic(request.issueType() == IssueType.EPIC ? null : resolveEpic(projectId, request.epicId()));
         issue.setLabels(normalizeLabels(request.labels()));
         issue.setUpdatedAt(Instant.now());
+        auditEventService.record(projectId, "ISSUE_UPDATED", "Issue updated", issue.getIssueKey() + " moved to " + issue.getStatus());
         return toResponse(issue);
     }
 

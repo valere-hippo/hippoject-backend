@@ -1,5 +1,6 @@
 package io.hippoject.backend.projectmember.service;
 
+import io.hippoject.backend.audit.service.AuditEventService;
 import io.hippoject.backend.common.exception.ConflictException;
 import io.hippoject.backend.project.domain.Project;
 import io.hippoject.backend.project.service.ProjectService;
@@ -18,10 +19,12 @@ public class ProjectMemberService {
 
     private final ProjectMemberRepository projectMemberRepository;
     private final ProjectService projectService;
+    private final AuditEventService auditEventService;
 
-    public ProjectMemberService(ProjectMemberRepository projectMemberRepository, ProjectService projectService) {
+    public ProjectMemberService(ProjectMemberRepository projectMemberRepository, ProjectService projectService, AuditEventService auditEventService) {
         this.projectMemberRepository = projectMemberRepository;
         this.projectService = projectService;
+        this.auditEventService = auditEventService;
     }
 
     public List<ProjectMemberResponse> listMembers(Long projectId) {
@@ -45,7 +48,9 @@ public class ProjectMemberService {
                 request.displayName().trim(),
                 request.role(),
                 Instant.now());
-        return toResponse(projectMemberRepository.save(member));
+        ProjectMember savedMember = projectMemberRepository.save(member);
+        auditEventService.record(projectId, "MEMBER_ADDED", "Member added", savedMember.getDisplayName() + " joined as " + savedMember.getRole());
+        return toResponse(savedMember);
     }
 
     private ProjectMemberResponse toResponse(ProjectMember member) {

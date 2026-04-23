@@ -1,0 +1,8 @@
+CREATE TABLE audit_events (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    project_id BIGINT NOT NULL,
+    type VARCHAR(60) NOT NULL,
+    title VARCHAR(140) NOT NULL,
+    detail VARCHAR(255) NOT NULL,
+    occurred_at TIMESTAMP NOT NULL
+);

@@ -1,5 +1,6 @@
 package io.hippoject.backend.project.service;
 
+import io.hippoject.backend.audit.service.AuditEventService;
 import io.hippoject.backend.common.exception.ConflictException;
 import io.hippoject.backend.common.exception.NotFoundException;
 import io.hippoject.backend.project.domain.Project;
@@ -22,10 +23,12 @@ public class ProjectService {
 
     private final ProjectRepository projectRepository;
     private final ProjectMemberRepository projectMemberRepository;
+    private final AuditEventService auditEventService;
 
-    public ProjectService(ProjectRepository projectRepository, ProjectMemberRepository projectMemberRepository) {
+    public ProjectService(ProjectRepository projectRepository, ProjectMemberRepository projectMemberRepository, AuditEventService auditEventService) {
         this.projectRepository = projectRepository;
         this.projectMemberRepository = projectMemberRepository;
+        this.auditEventService = auditEventService;
     }
 
     @Transactional
@@ -46,6 +49,7 @@ public class ProjectService {
         ProjectMember ownerMember = new ProjectMember(savedProject, actorId, actorId, ProjectRole.PROJECT_ADMIN, Instant.now());
         savedProject.getMembers().add(ownerMember);
         projectMemberRepository.save(ownerMember);
+        auditEventService.record(savedProject.getId(), "PROJECT_CREATED", "Project created", savedProject.getName() + " was created by " + actorId);
         return toResponse(savedProject);
     }
 
@@ -64,6 +68,7 @@ public class ProjectService {
         Project project = findProject(projectId);
         project.setName(request.name().trim());
         project.setDescription(request.description().trim());
+        auditEventService.record(project.getId(), "PROJECT_UPDATED", "Project updated", project.getName() + " project settings were updated");
         return toResponse(project);
     }
 
