@@ -2,6 +2,7 @@ package io.hippoject.backend.project.api;
 
 import io.hippoject.backend.project.dto.CreateProjectRequest;
 import io.hippoject.backend.project.dto.ProjectResponse;
+import io.hippoject.backend.project.dto.UpdateProjectRequest;
 import io.hippoject.backend.project.service.ProjectService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 
@@ -40,5 +42,10 @@ public class ProjectController {
     @GetMapping("/{projectId}")
     public ProjectResponse getProject(@PathVariable Long projectId) {
         return projectService.getProject(projectId);
+    }
+
+    @PutMapping("/{projectId}")
+    public ProjectResponse updateProject(@PathVariable Long projectId, @Valid @RequestBody UpdateProjectRequest request) {
+        return projectService.updateProject(projectId, request);
     }
 }

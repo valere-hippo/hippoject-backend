@@ -5,6 +5,7 @@ import io.hippoject.backend.common.exception.NotFoundException;
 import io.hippoject.backend.project.domain.Project;
 import io.hippoject.backend.project.dto.CreateProjectRequest;
 import io.hippoject.backend.project.dto.ProjectResponse;
+import io.hippoject.backend.project.dto.UpdateProjectRequest;
 import io.hippoject.backend.project.repository.ProjectRepository;
 import java.time.Instant;
 import java.util.List;
@@ -47,6 +48,14 @@ public class ProjectService {
 
     public ProjectResponse getProject(Long projectId) {
         return toResponse(findProject(projectId));
+    }
+
+    @Transactional
+    public ProjectResponse updateProject(Long projectId, UpdateProjectRequest request) {
+        Project project = findProject(projectId);
+        project.setName(request.name().trim());
+        project.setDescription(request.description().trim());
+        return toResponse(project);
     }
 
     public Project findProject(Long projectId) {
