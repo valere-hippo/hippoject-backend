@@ -35,6 +35,8 @@ public class SavedFilterService {
                 request.projectId(),
                 request.status(),
                 request.issueType(),
+                request.priority(),
+                trimToNull(request.assigneeId()),
                 trimToNull(request.label()),
                 Instant.now());
         return toResponse(savedFilterRepository.save(savedFilter));
@@ -48,6 +50,8 @@ public class SavedFilterService {
                 savedFilter.getProjectId(),
                 savedFilter.getStatus(),
                 savedFilter.getIssueType(),
+                savedFilter.getPriority(),
+                savedFilter.getAssigneeId(),
                 savedFilter.getLabel(),
                 savedFilter.getCreatedAt());
     }

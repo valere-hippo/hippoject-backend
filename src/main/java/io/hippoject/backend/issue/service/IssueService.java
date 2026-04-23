@@ -4,6 +4,7 @@ import io.hippoject.backend.comment.dto.CommentResponse;
 import io.hippoject.backend.comment.service.CommentMapper;
 import io.hippoject.backend.common.exception.NotFoundException;
 import io.hippoject.backend.issue.domain.Issue;
+import io.hippoject.backend.issue.domain.IssuePriority;
 import io.hippoject.backend.issue.domain.IssueStatus;
 import io.hippoject.backend.issue.domain.IssueType;
 import io.hippoject.backend.issue.dto.CreateIssueRequest;
@@ -71,11 +72,13 @@ public class IssueService {
                 .toList();
     }
 
-    public List<IssueResponse> listAllIssues(String query, Long projectId, IssueStatus status, IssueType issueType, String label) {
+    public List<IssueResponse> listAllIssues(String query, Long projectId, IssueStatus status, IssueType issueType, IssuePriority priority, String assigneeId, String label) {
         return issueRepository.findAllByOrderByUpdatedAtDesc().stream()
                 .filter((issue) -> projectId == null || issue.getProject().getId().equals(projectId))
                 .filter((issue) -> status == null || issue.getStatus() == status)
                 .filter((issue) -> issueType == null || issue.getIssueType() == issueType)
+                .filter((issue) -> priority == null || issue.getPriority() == priority)
+                .filter((issue) -> assigneeId == null || assigneeId.isBlank() || (issue.getAssigneeId() != null && issue.getAssigneeId().equalsIgnoreCase(assigneeId.trim())))
                 .filter((issue) -> label == null || issue.getLabels().stream().anyMatch((item) -> item.equalsIgnoreCase(label.trim())))
                 .filter((issue) -> matchesQuery(issue, query))
                 .map(this::toResponse)

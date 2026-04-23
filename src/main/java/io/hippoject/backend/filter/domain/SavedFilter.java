@@ -1,5 +1,6 @@
 package io.hippoject.backend.filter.domain;
 
+import io.hippoject.backend.issue.domain.IssuePriority;
 import io.hippoject.backend.issue.domain.IssueStatus;
 import io.hippoject.backend.issue.domain.IssueType;
 import jakarta.persistence.Column;
@@ -40,6 +41,13 @@ public class SavedFilter {
     @Column(length = 30)
     private IssueType issueType;
 
+    @Enumerated(EnumType.STRING)
+    @Column(length = 30)
+    private IssuePriority priority;
+
+    @Column(length = 120)
+    private String assigneeId;
+
     @Column(length = 50)
     private String label;
 
@@ -49,13 +57,15 @@ public class SavedFilter {
     protected SavedFilter() {
     }
 
-    public SavedFilter(String ownerId, String name, String query, Long projectId, IssueStatus status, IssueType issueType, String label, Instant createdAt) {
+    public SavedFilter(String ownerId, String name, String query, Long projectId, IssueStatus status, IssueType issueType, IssuePriority priority, String assigneeId, String label, Instant createdAt) {
         this.ownerId = ownerId;
         this.name = name;
         this.query = query;
         this.projectId = projectId;
         this.status = status;
         this.issueType = issueType;
+        this.priority = priority;
+        this.assigneeId = assigneeId;
         this.label = label;
         this.createdAt = createdAt;
     }
@@ -86,6 +96,14 @@ public class SavedFilter {
 
     public IssueType getIssueType() {
         return issueType;
+    }
+
+    public IssuePriority getPriority() {
+        return priority;
+    }
+
+    public String getAssigneeId() {
+        return assigneeId;
     }
 
     public String getLabel() {
