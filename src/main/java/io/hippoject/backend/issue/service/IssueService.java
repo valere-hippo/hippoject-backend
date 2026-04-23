@@ -5,6 +5,7 @@ import io.hippoject.backend.comment.service.CommentMapper;
 import io.hippoject.backend.common.exception.NotFoundException;
 import io.hippoject.backend.issue.domain.Issue;
 import io.hippoject.backend.issue.domain.IssueStatus;
+import io.hippoject.backend.issue.domain.IssueType;
 import io.hippoject.backend.issue.dto.CreateIssueRequest;
 import io.hippoject.backend.issue.dto.IssueResponse;
 import io.hippoject.backend.issue.dto.UpdateIssueRequest;
@@ -14,7 +15,10 @@ import io.hippoject.backend.project.service.ProjectService;
 import io.hippoject.backend.sprint.domain.Sprint;
 import io.hippoject.backend.sprint.service.SprintService;
 import java.time.Instant;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,12 +50,14 @@ public class IssueService {
                 request.title().trim(),
                 request.description().trim(),
                 request.status() != null ? request.status() : IssueStatus.TODO,
+                request.issueType(),
                 request.priority(),
                 trimToNull(request.assigneeId()),
                 sprint,
                 actorId(jwt),
                 now,
-                now);
+                now,
+                normalizeLabels(request.labels()));
 
         return toResponse(issueRepository.save(issue));
     }
@@ -63,8 +69,13 @@ public class IssueService {
                 .toList();
     }
 
-    public List<IssueResponse> listAllIssues() {
+    public List<IssueResponse> listAllIssues(String query, Long projectId, IssueStatus status, IssueType issueType, String label) {
         return issueRepository.findAllByOrderByUpdatedAtDesc().stream()
+                .filter((issue) -> projectId == null || issue.getProject().getId().equals(projectId))
+                .filter((issue) -> status == null || issue.getStatus() == status)
+                .filter((issue) -> issueType == null || issue.getIssueType() == issueType)
+                .filter((issue) -> label == null || issue.getLabels().stream().anyMatch((item) -> item.equalsIgnoreCase(label.trim())))
+                .filter((issue) -> matchesQuery(issue, query))
                 .map(this::toResponse)
                 .toList();
     }
@@ -78,10 +89,12 @@ public class IssueService {
         Issue issue = findIssue(projectId, issueId);
         issue.setTitle(request.title().trim());
         issue.setDescription(request.description().trim());
+        issue.setIssueType(request.issueType());
         issue.setStatus(request.status());
         issue.setPriority(request.priority());
         issue.setAssigneeId(trimToNull(request.assigneeId()));
         issue.setSprint(sprintService.resolveSprint(projectId, request.sprintId()));
+        issue.setLabels(normalizeLabels(request.labels()));
         issue.setUpdatedAt(Instant.now());
         return toResponse(issue);
     }
@@ -105,9 +118,11 @@ public class IssueService {
                 issue.getTitle(),
                 issue.getDescription(),
                 issue.getStatus(),
+                issue.getIssueType(),
                 issue.getPriority(),
                 issue.getSprint() != null ? issue.getSprint().getId() : null,
                 issue.getSprint() != null ? issue.getSprint().getName() : null,
+                issue.getLabels(),
                 issue.getAssigneeId(),
                 issue.getReporterId(),
                 issue.getCreatedAt(),
@@ -135,5 +150,27 @@ public class IssueService {
             return null;
         }
         return value.trim();
+    }
+
+    private boolean matchesQuery(Issue issue, String query) {
+        if (query == null || query.isBlank()) {
+            return true;
+        }
+        String needle = query.trim().toLowerCase(Locale.ROOT);
+        return issue.getIssueKey().toLowerCase(Locale.ROOT).contains(needle)
+                || issue.getTitle().toLowerCase(Locale.ROOT).contains(needle)
+                || issue.getDescription().toLowerCase(Locale.ROOT).contains(needle)
+                || issue.getProject().getKey().toLowerCase(Locale.ROOT).contains(needle);
+    }
+
+    private Set<String> normalizeLabels(Set<String> labels) {
+        if (labels == null || labels.isEmpty()) {
+            return new LinkedHashSet<>();
+        }
+        return labels.stream()
+                .filter((label) -> label != null && !label.isBlank())
+                .map(String::trim)
+                .limit(10)
+                .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
     }
 }

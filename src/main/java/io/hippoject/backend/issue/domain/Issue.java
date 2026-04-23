@@ -8,6 +8,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.CollectionTable;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -18,7 +20,9 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "issues")
@@ -49,6 +53,10 @@ public class Issue {
     @Column(nullable = false, length = 30)
     private IssuePriority priority;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
+    private IssueType issueType;
+
     @Column(length = 120)
     private String assigneeId;
 
@@ -65,6 +73,11 @@ public class Issue {
     @Column(nullable = false)
     private Instant updatedAt;
 
+    @ElementCollection
+    @CollectionTable(name = "issue_labels", joinColumns = @JoinColumn(name = "issue_id"))
+    @Column(name = "label", nullable = false, length = 50)
+    private Set<String> labels = new LinkedHashSet<>();
+
     @OneToMany(mappedBy = "issue", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Comment> comments = new ArrayList<>();
 
@@ -78,22 +91,26 @@ public class Issue {
             String description,
             IssueStatus status,
             IssuePriority priority,
+            IssueType issueType,
             String assigneeId,
             Sprint sprint,
             String reporterId,
             Instant createdAt,
-            Instant updatedAt) {
+            Instant updatedAt,
+            Set<String> labels) {
         this.project = project;
         this.issueKey = issueKey;
         this.title = title;
         this.description = description;
         this.status = status;
         this.priority = priority;
+        this.issueType = issueType;
         this.assigneeId = assigneeId;
         this.sprint = sprint;
         this.reporterId = reporterId;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+        this.labels = labels != null ? new LinkedHashSet<>(labels) : new LinkedHashSet<>();
     }
 
     public Long getId() {
@@ -140,6 +157,14 @@ public class Issue {
         this.priority = priority;
     }
 
+    public IssueType getIssueType() {
+        return issueType;
+    }
+
+    public void setIssueType(IssueType issueType) {
+        this.issueType = issueType;
+    }
+
     public String getAssigneeId() {
         return assigneeId;
     }
@@ -174,5 +199,13 @@ public class Issue {
 
     public List<Comment> getComments() {
         return comments;
+    }
+
+    public Set<String> getLabels() {
+        return labels;
+    }
+
+    public void setLabels(Set<String> labels) {
+        this.labels = labels;
     }
 }
