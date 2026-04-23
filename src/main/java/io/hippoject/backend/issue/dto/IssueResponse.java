@@ -15,6 +15,8 @@ public record IssueResponse(
         String description,
         IssueStatus status,
         IssuePriority priority,
+        Long sprintId,
+        String sprintName,
         String assigneeId,
         String reporterId,
         Instant createdAt,

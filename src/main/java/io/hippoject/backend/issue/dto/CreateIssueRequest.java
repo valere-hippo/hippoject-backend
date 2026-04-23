@@ -16,6 +16,7 @@ public record CreateIssueRequest(
         @NotNull(message = "Issue priority is required")
         IssuePriority priority,
         IssueStatus status,
+        Long sprintId,
         @Size(max = 120, message = "Assignee id must be at most 120 characters")
         String assigneeId) {
 }

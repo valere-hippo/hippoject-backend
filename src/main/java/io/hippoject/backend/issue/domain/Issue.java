@@ -2,6 +2,7 @@ package io.hippoject.backend.issue.domain;
 
 import io.hippoject.backend.comment.domain.Comment;
 import io.hippoject.backend.project.domain.Project;
+import io.hippoject.backend.sprint.domain.Sprint;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -51,6 +52,10 @@ public class Issue {
     @Column(length = 120)
     private String assigneeId;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sprint_id")
+    private Sprint sprint;
+
     @Column(nullable = false, length = 120)
     private String reporterId;
 
@@ -74,6 +79,7 @@ public class Issue {
             IssueStatus status,
             IssuePriority priority,
             String assigneeId,
+            Sprint sprint,
             String reporterId,
             Instant createdAt,
             Instant updatedAt) {
@@ -84,6 +90,7 @@ public class Issue {
         this.status = status;
         this.priority = priority;
         this.assigneeId = assigneeId;
+        this.sprint = sprint;
         this.reporterId = reporterId;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
@@ -139,6 +146,14 @@ public class Issue {
 
     public void setAssigneeId(String assigneeId) {
         this.assigneeId = assigneeId;
+    }
+
+    public Sprint getSprint() {
+        return sprint;
+    }
+
+    public void setSprint(Sprint sprint) {
+        this.sprint = sprint;
     }
 
     public String getReporterId() {

@@ -11,6 +11,8 @@ import io.hippoject.backend.issue.dto.UpdateIssueRequest;
 import io.hippoject.backend.issue.repository.IssueRepository;
 import io.hippoject.backend.project.domain.Project;
 import io.hippoject.backend.project.service.ProjectService;
+import io.hippoject.backend.sprint.domain.Sprint;
+import io.hippoject.backend.sprint.service.SprintService;
 import java.time.Instant;
 import java.util.List;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -24,17 +26,20 @@ public class IssueService {
     private final IssueRepository issueRepository;
     private final ProjectService projectService;
     private final CommentMapper commentMapper;
+    private final SprintService sprintService;
 
-    public IssueService(IssueRepository issueRepository, ProjectService projectService, CommentMapper commentMapper) {
+    public IssueService(IssueRepository issueRepository, ProjectService projectService, CommentMapper commentMapper, SprintService sprintService) {
         this.issueRepository = issueRepository;
         this.projectService = projectService;
         this.commentMapper = commentMapper;
+        this.sprintService = sprintService;
     }
 
     @Transactional
     public IssueResponse createIssue(Long projectId, CreateIssueRequest request, Jwt jwt) {
         Project project = projectService.findProject(projectId);
         Instant now = Instant.now();
+        Sprint sprint = sprintService.resolveSprint(projectId, request.sprintId());
         Issue issue = new Issue(
                 project,
                 nextIssueKey(project),
@@ -43,6 +48,7 @@ public class IssueService {
                 request.status() != null ? request.status() : IssueStatus.TODO,
                 request.priority(),
                 trimToNull(request.assigneeId()),
+                sprint,
                 actorId(jwt),
                 now,
                 now);
@@ -75,6 +81,7 @@ public class IssueService {
         issue.setStatus(request.status());
         issue.setPriority(request.priority());
         issue.setAssigneeId(trimToNull(request.assigneeId()));
+        issue.setSprint(sprintService.resolveSprint(projectId, request.sprintId()));
         issue.setUpdatedAt(Instant.now());
         return toResponse(issue);
     }
@@ -99,6 +106,8 @@ public class IssueService {
                 issue.getDescription(),
                 issue.getStatus(),
                 issue.getPriority(),
+                issue.getSprint() != null ? issue.getSprint().getId() : null,
+                issue.getSprint() != null ? issue.getSprint().getName() : null,
                 issue.getAssigneeId(),
                 issue.getReporterId(),
                 issue.getCreatedAt(),
