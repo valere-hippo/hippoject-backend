@@ -25,4 +25,8 @@ public interface IssueRepository extends JpaRepository<Issue, Long> {
     long countByPriority(IssuePriority priority);
 
     long countByIssueType(IssueType issueType);
+
+    long countByEpicId(Long epicId);
+
+    long countByEpicIdAndStatus(Long epicId, IssueStatus status);
 }

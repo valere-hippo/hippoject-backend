@@ -112,6 +112,8 @@ public class IssueService {
         List<CommentResponse> comments = issue.getComments().stream()
                 .map(commentMapper::toResponse)
                 .toList();
+        long epicProgressTotal = issue.getIssueType() == IssueType.EPIC ? issueRepository.countByEpicId(issue.getId()) : 0;
+        long epicProgressDone = issue.getIssueType() == IssueType.EPIC ? issueRepository.countByEpicIdAndStatus(issue.getId(), IssueStatus.DONE) : 0;
 
         return new IssueResponse(
                 issue.getId(),
@@ -129,6 +131,8 @@ public class IssueService {
                 issue.getEpic() != null ? issue.getEpic().getIssueKey() : null,
                 issue.getEpic() != null ? issue.getEpic().getTitle() : null,
                 issue.getLabels(),
+                epicProgressTotal,
+                epicProgressDone,
                 issue.getAssigneeId(),
                 issue.getReporterId(),
                 issue.getCreatedAt(),

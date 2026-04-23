@@ -24,6 +24,8 @@ public record IssueResponse(
         String epicKey,
         String epicTitle,
         Set<String> labels,
+        long epicProgressTotal,
+        long epicProgressDone,
         String assigneeId,
         String reporterId,
         Instant createdAt,
