@@ -77,6 +77,9 @@ public class Issue {
     @Column(nullable = false)
     private Instant updatedAt;
 
+    @Column
+    private Instant deletedAt;
+
     @ElementCollection
     @CollectionTable(name = "issue_labels", joinColumns = @JoinColumn(name = "issue_id"))
     @Column(name = "label", nullable = false, length = 50)
@@ -209,6 +212,14 @@ public class Issue {
 
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public Instant getDeletedAt() {
+        return deletedAt;
+    }
+
+    public void setDeletedAt(Instant deletedAt) {
+        this.deletedAt = deletedAt;
     }
 
     public List<Comment> getComments() {

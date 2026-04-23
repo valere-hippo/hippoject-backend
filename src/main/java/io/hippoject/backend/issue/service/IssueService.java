@@ -77,12 +77,14 @@ public class IssueService {
     public List<IssueResponse> listIssues(Long projectId) {
         projectService.findProject(projectId);
         return issueRepository.findByProjectIdOrderByCreatedAtDesc(projectId).stream()
+                .filter((issue) -> issue.getDeletedAt() == null)
                 .map(this::toResponse)
                 .toList();
     }
 
     public List<IssueResponse> listAllIssues(String query, Long projectId, IssueStatus status, IssueType issueType, IssuePriority priority, String assigneeId, String label) {
         return issueRepository.findAllByOrderByUpdatedAtDesc().stream()
+                .filter((issue) -> issue.getDeletedAt() == null)
                 .filter((issue) -> projectId == null || issue.getProject().getId().equals(projectId))
                 .filter((issue) -> status == null || issue.getStatus() == status)
                 .filter((issue) -> issueType == null || issue.getIssueType() == issueType)
@@ -120,14 +122,33 @@ public class IssueService {
     }
 
     @Transactional
-    public void deleteIssue(Long projectId, Long issueId) {
+    public IssueResponse deleteIssue(Long projectId, Long issueId) {
         Issue issue = findIssue(projectId, issueId);
         issueRepository.findByEpicId(issueId).forEach((child) -> child.setEpic(null));
-        issueRepository.delete(issue);
-        auditEventService.record(projectId, "ISSUE_DELETED", "Issue deleted", issue.getIssueKey() + " was removed");
+        issue.setDeletedAt(Instant.now());
+        issue.setSprint(null);
+        auditEventService.record(projectId, "ISSUE_DELETED", "Issue archived", issue.getIssueKey() + " was archived");
+        return toResponse(issue);
+    }
+
+    @Transactional
+    public IssueResponse restoreIssue(Long projectId, Long issueId) {
+        Issue issue = findIssueIncludingDeleted(projectId, issueId);
+        issue.setDeletedAt(null);
+        issue.setUpdatedAt(Instant.now());
+        auditEventService.record(projectId, "ISSUE_RESTORED", "Issue restored", issue.getIssueKey() + " was restored");
+        return toResponse(issue);
     }
 
     public Issue findIssue(Long projectId, Long issueId) {
+        Issue issue = findIssueIncludingDeleted(projectId, issueId);
+        if (issue.getDeletedAt() != null) {
+            throw new NotFoundException("Issue not found: " + issueId + " in project " + projectId);
+        }
+        return issue;
+    }
+
+    public Issue findIssueIncludingDeleted(Long projectId, Long issueId) {
         projectService.findProject(projectId);
         return issueRepository.findByProjectIdAndId(projectId, issueId)
                 .orElseThrow(() -> new NotFoundException("Issue not found: " + issueId + " in project " + projectId));
@@ -162,6 +183,7 @@ public class IssueService {
                 issue.getReporterId(),
                 issue.getCreatedAt(),
                 issue.getUpdatedAt(),
+                issue.getDeletedAt(),
                 comments);
     }
 

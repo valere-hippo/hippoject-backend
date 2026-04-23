@@ -60,9 +60,14 @@ public class IssueController {
     }
 
     @DeleteMapping("/{issueId}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("@roleGuard.hasAnyRole(authentication, 'hippoject-admin', 'project-admin', 'project-manager', 'developer')")
-    public void deleteIssue(@PathVariable Long projectId, @PathVariable Long issueId) {
-        issueService.deleteIssue(projectId, issueId);
+    public IssueResponse deleteIssue(@PathVariable Long projectId, @PathVariable Long issueId) {
+        return issueService.deleteIssue(projectId, issueId);
+    }
+
+    @PutMapping("/{issueId}/restore")
+    @PreAuthorize("@roleGuard.hasAnyRole(authentication, 'hippoject-admin', 'project-admin', 'project-manager', 'developer')")
+    public IssueResponse restoreIssue(@PathVariable Long projectId, @PathVariable Long issueId) {
+        return issueService.restoreIssue(projectId, issueId);
     }
 }

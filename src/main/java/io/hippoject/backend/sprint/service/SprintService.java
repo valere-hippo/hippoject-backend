@@ -37,6 +37,7 @@ public class SprintService {
     public List<SprintResponse> listSprints(Long projectId) {
         projectService.findProject(projectId);
         return sprintRepository.findByProjectIdOrderByStartsAtDesc(projectId).stream()
+                .filter((sprint) -> sprint.getDeletedAt() == null)
                 .map(this::toResponse)
                 .toList();
     }
@@ -83,14 +84,32 @@ public class SprintService {
     }
 
     @Transactional
-    public void deleteSprint(Long projectId, Long sprintId) {
+    public SprintResponse deleteSprint(Long projectId, Long sprintId) {
         Sprint sprint = findSprint(projectId, sprintId);
         issueRepository.findBySprintId(sprintId).forEach((issue) -> issue.setSprint(null));
-        sprintRepository.delete(sprint);
-        auditEventService.record(projectId, "SPRINT_DELETED", "Sprint deleted", sprint.getName() + " was removed");
+        sprint.setActive(false);
+        sprint.setDeletedAt(Instant.now());
+        auditEventService.record(projectId, "SPRINT_DELETED", "Sprint archived", sprint.getName() + " was archived");
+        return toResponse(sprint);
+    }
+
+    @Transactional
+    public SprintResponse restoreSprint(Long projectId, Long sprintId) {
+        Sprint sprint = findSprintIncludingDeleted(projectId, sprintId);
+        sprint.setDeletedAt(null);
+        auditEventService.record(projectId, "SPRINT_RESTORED", "Sprint restored", sprint.getName() + " was restored");
+        return toResponse(sprint);
     }
 
     public Sprint findSprint(Long projectId, Long sprintId) {
+        Sprint sprint = findSprintIncludingDeleted(projectId, sprintId);
+        if (sprint.getDeletedAt() != null) {
+            throw new NotFoundException("Sprint not found: " + sprintId + " in project " + projectId);
+        }
+        return sprint;
+    }
+
+    public Sprint findSprintIncludingDeleted(Long projectId, Long sprintId) {
         projectService.findProject(projectId);
         return sprintRepository.findByProjectIdAndId(projectId, sprintId)
                 .orElseThrow(() -> new NotFoundException("Sprint not found: " + sprintId + " in project " + projectId));
@@ -119,6 +138,7 @@ public class SprintService {
                 determineStatus(sprint),
                 sprint.isActive(),
                 sprint.getCompletedAt(),
+                sprint.getDeletedAt(),
                 sprint.getCreatedAt(),
                 sprint.getIssues().size());
     }

@@ -52,9 +52,14 @@ public class SprintController {
     }
 
     @DeleteMapping("/{sprintId}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("@roleGuard.hasAnyRole(authentication, 'hippoject-admin', 'project-admin', 'project-manager')")
-    public void deleteSprint(@PathVariable Long projectId, @PathVariable Long sprintId) {
-        sprintService.deleteSprint(projectId, sprintId);
+    public SprintResponse deleteSprint(@PathVariable Long projectId, @PathVariable Long sprintId) {
+        return sprintService.deleteSprint(projectId, sprintId);
+    }
+
+    @PutMapping("/{sprintId}/restore")
+    @PreAuthorize("@roleGuard.hasAnyRole(authentication, 'hippoject-admin', 'project-admin', 'project-manager')")
+    public SprintResponse restoreSprint(@PathVariable Long projectId, @PathVariable Long sprintId) {
+        return sprintService.restoreSprint(projectId, sprintId);
     }
 }

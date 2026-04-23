@@ -14,6 +14,7 @@ public record SprintResponse(
         SprintStatus status,
         boolean active,
         Instant completedAt,
+        Instant deletedAt,
         Instant createdAt,
         long issueCount) {
 }

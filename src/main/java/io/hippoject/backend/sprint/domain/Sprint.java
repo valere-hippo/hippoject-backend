@@ -48,6 +48,9 @@ public class Sprint {
     @Column
     private Instant completedAt;
 
+    @Column
+    private Instant deletedAt;
+
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -105,6 +108,14 @@ public class Sprint {
 
     public void setCompletedAt(Instant completedAt) {
         this.completedAt = completedAt;
+    }
+
+    public Instant getDeletedAt() {
+        return deletedAt;
+    }
+
+    public void setDeletedAt(Instant deletedAt) {
+        this.deletedAt = deletedAt;
     }
 
     public Instant getCreatedAt() {

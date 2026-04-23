@@ -1,0 +1,5 @@
+ALTER TABLE issues
+    ADD COLUMN deleted_at TIMESTAMP NULL;
+
+ALTER TABLE sprints
+    ADD COLUMN deleted_at TIMESTAMP NULL;

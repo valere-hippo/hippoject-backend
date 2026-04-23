@@ -30,5 +30,6 @@ public record IssueResponse(
         String reporterId,
         Instant createdAt,
         Instant updatedAt,
+        Instant deletedAt,
         List<CommentResponse> comments) {
 }

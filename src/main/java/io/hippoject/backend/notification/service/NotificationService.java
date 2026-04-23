@@ -7,6 +7,7 @@ import io.hippoject.backend.notification.domain.Notification;
 import io.hippoject.backend.notification.dto.NotificationResponse;
 import io.hippoject.backend.notification.repository.NotificationRepository;
 import io.hippoject.backend.projectmember.repository.ProjectMemberRepository;
+import io.hippoject.backend.realtime.service.RealtimeEventService;
 import io.hippoject.backend.sprint.domain.Sprint;
 import java.time.Instant;
 import java.util.List;
@@ -26,11 +27,13 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final ProjectMemberRepository projectMemberRepository;
     private final EmailNotificationService emailNotificationService;
+    private final RealtimeEventService realtimeEventService;
 
-    public NotificationService(NotificationRepository notificationRepository, ProjectMemberRepository projectMemberRepository, EmailNotificationService emailNotificationService) {
+    public NotificationService(NotificationRepository notificationRepository, ProjectMemberRepository projectMemberRepository, EmailNotificationService emailNotificationService, RealtimeEventService realtimeEventService) {
         this.notificationRepository = notificationRepository;
         this.projectMemberRepository = projectMemberRepository;
         this.emailNotificationService = emailNotificationService;
+        this.realtimeEventService = realtimeEventService;
     }
 
     public List<NotificationResponse> listNotifications(Jwt jwt) {
@@ -44,6 +47,7 @@ public class NotificationService {
         Notification notification = notificationRepository.findByIdAndRecipientId(notificationId, actorId(jwt))
                 .orElseThrow(() -> new NotFoundException("Notification not found: " + notificationId));
         notification.setRead(true);
+        realtimeEventService.broadcast("notifications-updated", notification.getRecipientId());
         return toResponse(notification);
     }
 
@@ -89,6 +93,7 @@ public class NotificationService {
 
     private void saveAndDispatch(String recipientId, String type, Long projectId, Long issueId, String message, String link) {
         notificationRepository.save(new Notification(recipientId, type, projectId, issueId, message, false, Instant.now()));
+        realtimeEventService.broadcast("notifications-updated", recipientId);
         projectMemberRepository.findByProjectIdAndUserIdIgnoreCase(projectId, recipientId)
                 .map((member) -> member.getEmail())
                 .ifPresent((email) -> emailNotificationService.send(email, "Hippoject notification", message + "\n\nOpen: " + link));
