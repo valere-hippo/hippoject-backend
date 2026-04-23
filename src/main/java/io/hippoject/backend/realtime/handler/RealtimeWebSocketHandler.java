@@ -26,4 +26,11 @@ public class RealtimeWebSocketHandler extends TextWebSocketHandler {
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
         realtimeEventService.unregisterSession(session);
     }
+
+    @Override
+    protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
+        if (message.getPayload().contains("ping")) {
+            session.sendMessage(new TextMessage("{\"type\":\"heartbeat\",\"payload\":{\"status\":\"ok\"}}"));
+        }
+    }
 }

@@ -22,6 +22,6 @@ public class AuditEventService {
     @Transactional
     public void record(Long projectId, String type, String title, String detail) {
         auditEventRepository.save(new AuditEvent(projectId, type, title, detail, Instant.now()));
-        realtimeEventService.broadcast("project-updated", String.valueOf(projectId));
+        realtimeEventService.broadcastProjectUpdated(projectId);
     }
 }
