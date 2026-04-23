@@ -7,6 +7,9 @@ import io.hippoject.backend.project.dto.CreateProjectRequest;
 import io.hippoject.backend.project.dto.ProjectResponse;
 import io.hippoject.backend.project.dto.UpdateProjectRequest;
 import io.hippoject.backend.project.repository.ProjectRepository;
+import io.hippoject.backend.projectmember.domain.ProjectMember;
+import io.hippoject.backend.projectmember.domain.ProjectRole;
+import io.hippoject.backend.projectmember.repository.ProjectMemberRepository;
 import java.time.Instant;
 import java.util.List;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -18,9 +21,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class ProjectService {
 
     private final ProjectRepository projectRepository;
+    private final ProjectMemberRepository projectMemberRepository;
 
-    public ProjectService(ProjectRepository projectRepository) {
+    public ProjectService(ProjectRepository projectRepository, ProjectMemberRepository projectMemberRepository) {
         this.projectRepository = projectRepository;
+        this.projectMemberRepository = projectMemberRepository;
     }
 
     @Transactional
@@ -30,14 +35,18 @@ public class ProjectService {
             throw new ConflictException("Project key already exists: " + projectKey);
         }
 
+        String actorId = actorId(jwt);
         Project project = new Project(
                 projectKey,
                 request.name().trim(),
                 request.description().trim(),
-                actorId(jwt),
+                actorId,
                 Instant.now());
-
-        return toResponse(projectRepository.save(project));
+        Project savedProject = projectRepository.save(project);
+        ProjectMember ownerMember = new ProjectMember(savedProject, actorId, actorId, ProjectRole.PROJECT_ADMIN, Instant.now());
+        savedProject.getMembers().add(ownerMember);
+        projectMemberRepository.save(ownerMember);
+        return toResponse(savedProject);
     }
 
     public List<ProjectResponse> listProjects() {
@@ -71,7 +80,8 @@ public class ProjectService {
                 project.getDescription(),
                 project.getOwnerId(),
                 project.getCreatedAt(),
-                project.getIssues().size());
+                project.getIssues().size(),
+                project.getMembers().size());
     }
 
     private String actorId(Jwt jwt) {

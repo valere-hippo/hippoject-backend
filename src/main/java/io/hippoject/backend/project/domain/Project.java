@@ -1,6 +1,7 @@
 package io.hippoject.backend.project.domain;
 
 import io.hippoject.backend.issue.domain.Issue;
+import io.hippoject.backend.projectmember.domain.ProjectMember;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -39,6 +40,9 @@ public class Project {
 
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Issue> issues = new ArrayList<>();
+
+    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<ProjectMember> members = new ArrayList<>();
 
     protected Project() {
     }
@@ -93,5 +97,9 @@ public class Project {
 
     public List<Issue> getIssues() {
         return issues;
+    }
+
+    public List<ProjectMember> getMembers() {
+        return members;
     }
 }

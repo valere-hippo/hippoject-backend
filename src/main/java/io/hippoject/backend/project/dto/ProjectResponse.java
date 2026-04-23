@@ -9,5 +9,6 @@ public record ProjectResponse(
         String description,
         String ownerId,
         Instant createdAt,
-        long issueCount) {
+        long issueCount,
+        long memberCount) {
 }
