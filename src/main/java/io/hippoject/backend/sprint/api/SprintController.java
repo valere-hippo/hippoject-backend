@@ -6,6 +6,7 @@ import io.hippoject.backend.sprint.service.SprintService;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -31,6 +32,7 @@ public class SprintController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("@roleGuard.hasAnyRole(authentication, 'hippoject-admin', 'project-admin', 'project-manager')")
     public SprintResponse createSprint(@PathVariable Long projectId, @Valid @RequestBody CreateSprintRequest request) {
         return sprintService.createSprint(projectId, request);
     }

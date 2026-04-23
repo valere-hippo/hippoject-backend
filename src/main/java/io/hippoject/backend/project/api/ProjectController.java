@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.oauth2.jwt.Jwt;
 
 @RestController
@@ -30,6 +31,7 @@ public class ProjectController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("@roleGuard.hasAnyRole(authentication, 'hippoject-admin', 'project-admin', 'project-manager')")
     public ProjectResponse createProject(@Valid @RequestBody CreateProjectRequest request, @AuthenticationPrincipal Jwt jwt) {
         return projectService.createProject(request, jwt);
     }
@@ -45,6 +47,7 @@ public class ProjectController {
     }
 
     @PutMapping("/{projectId}")
+    @PreAuthorize("@roleGuard.hasAnyRole(authentication, 'hippoject-admin', 'project-admin', 'project-manager')")
     public ProjectResponse updateProject(@PathVariable Long projectId, @Valid @RequestBody UpdateProjectRequest request) {
         return projectService.updateProject(projectId, request);
     }

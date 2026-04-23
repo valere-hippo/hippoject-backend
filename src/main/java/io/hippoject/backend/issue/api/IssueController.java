@@ -7,6 +7,7 @@ import io.hippoject.backend.issue.service.IssueService;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,6 +31,7 @@ public class IssueController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("@roleGuard.hasAnyRole(authentication, 'hippoject-admin', 'project-admin', 'project-manager', 'developer', 'reporter')")
     public IssueResponse createIssue(
             @PathVariable Long projectId,
             @Valid @RequestBody CreateIssueRequest request,
@@ -48,6 +50,7 @@ public class IssueController {
     }
 
     @PutMapping("/{issueId}")
+    @PreAuthorize("@roleGuard.hasAnyRole(authentication, 'hippoject-admin', 'project-admin', 'project-manager', 'developer')")
     public IssueResponse updateIssue(
             @PathVariable Long projectId,
             @PathVariable Long issueId,
