@@ -47,7 +47,7 @@ public class NotificationService {
         Notification notification = notificationRepository.findByIdAndRecipientId(notificationId, actorId(jwt))
                 .orElseThrow(() -> new NotFoundException("Notification not found: " + notificationId));
         notification.setRead(true);
-        realtimeEventService.broadcastNotificationsUpdated(notification.getRecipientId());
+        realtimeEventService.broadcastNotificationsUpdated(notification.getRecipientId(), notification.getType());
         return toResponse(notification);
     }
 
@@ -93,7 +93,7 @@ public class NotificationService {
 
     private void saveAndDispatch(String recipientId, String type, Long projectId, Long issueId, String message, String link) {
         notificationRepository.save(new Notification(recipientId, type, projectId, issueId, message, false, Instant.now()));
-        realtimeEventService.broadcastNotificationsUpdated(recipientId);
+        realtimeEventService.broadcastNotificationsUpdated(recipientId, type);
         projectMemberRepository.findByProjectIdAndUserIdIgnoreCase(projectId, recipientId)
                 .map((member) -> member.getEmail())
                 .ifPresent((email) -> emailNotificationService.send(email, "Hippoject notification", message + "\n\nOpen: " + link));
