@@ -18,10 +18,8 @@ import io.hippoject.backend.project.service.ProjectService;
 import io.hippoject.backend.sprint.domain.Sprint;
 import io.hippoject.backend.sprint.service.SprintService;
 import java.time.Instant;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Set;
+import java.util.*;
+
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -82,17 +80,87 @@ public class IssueService {
                 .toList();
     }
 
-    public List<IssueResponse> listAllIssues(String query, Long projectId, IssueStatus status, IssueType issueType, IssuePriority priority, String assigneeId, String label, boolean includeArchived) {
-        return issueRepository.findAllByOrderByUpdatedAtDesc().stream()
-                .filter((issue) -> includeArchived || issue.getDeletedAt() == null)
-                .filter((issue) -> projectId == null || issue.getProject().getId().equals(projectId))
-                .filter((issue) -> status == null || issue.getStatus() == status)
-                .filter((issue) -> issueType == null || issue.getIssueType() == issueType)
-                .filter((issue) -> priority == null || issue.getPriority() == priority)
-                .filter((issue) -> assigneeId == null || assigneeId.isBlank() || (issue.getAssigneeId() != null && issue.getAssigneeId().equalsIgnoreCase(assigneeId.trim())))
-                .filter((issue) -> label == null || issue.getLabels().stream().anyMatch((item) -> item.equalsIgnoreCase(label.trim())))
-                .filter((issue) -> matchesQuery(issue, query))
-                .map(this::toResponse)
+    public List<IssueResponse> listAllIssues(
+            String query,
+            Long projectId,
+            IssueStatus status,
+            IssueType issueType,
+            IssuePriority priority,
+            String assigneeId,
+            String label,
+            boolean includeArchived
+    ) {
+
+        String normalizedAssignee =
+                assigneeId == null ? null : assigneeId.trim();
+
+        String normalizedLabel =
+                label == null ? null : label.trim();
+
+        return issueRepository.findAllByOrderByUpdatedAtDesc()
+                .stream()
+
+                // Archivierte Issues
+                .filter(issue ->
+                        includeArchived || issue.getDeletedAt() == null
+                )
+
+                // Projekt
+                .filter(issue ->
+                        projectId == null ||
+                                (
+                                        issue.getProject() != null &&
+                                                projectId.equals(issue.getProject().getId())
+                                )
+                )
+
+                // Status
+                .filter(issue ->
+                        status == null || issue.getStatus() == status
+                )
+
+                // Typ
+                .filter(issue ->
+                        issueType == null || issue.getIssueType() == issueType
+                )
+
+                // Priorität
+                .filter(issue ->
+                        priority == null || issue.getPriority() == priority
+                )
+
+                // Assignee
+                .filter(issue ->
+                        normalizedAssignee == null ||
+                                normalizedAssignee.isBlank() ||
+                                (
+                                        issue.getAssigneeId() != null &&
+                                                issue.getAssigneeId().equalsIgnoreCase(normalizedAssignee)
+                                )
+                )
+
+                // Label
+                .filter(issue ->
+                        normalizedLabel == null ||
+                                normalizedLabel.isBlank() ||
+                                (
+                                        issue.getLabels() != null &&
+                                                issue.getLabels().stream()
+                                                        .filter(Objects::nonNull)
+                                                        .anyMatch(item ->
+                                                                item.equalsIgnoreCase(normalizedLabel)
+                                                        )
+                                )
+                )
+
+                // Suche
+                .filter(issue -> matchesQuery(issue, query))
+
+                // Mapping
+                .map(issue -> {
+                    return toResponse(issue);
+                })
+
                 .toList();
     }
 
@@ -155,17 +223,34 @@ public class IssueService {
     }
 
     public IssueResponse toResponse(Issue issue) {
-        List<CommentResponse> comments = issue.getComments().stream()
-                .map(commentMapper::toResponse)
-                .toList();
-        long epicProgressTotal = issue.getIssueType() == IssueType.EPIC ? issueRepository.countByEpicId(issue.getId()) : 0;
-        long epicProgressDone = issue.getIssueType() == IssueType.EPIC ? issueRepository.countByEpicIdAndStatus(issue.getId(), IssueStatus.DONE) : 0;
+
+        List<CommentResponse> comments =
+                issue.getComments() == null
+                        ? List.of()
+                        : issue.getComments().stream()
+                        .map(commentMapper::toResponse)
+                        .toList();
+
+        Set<String> labels =
+                issue.getLabels() == null
+                        ? Set.of()
+                        : new LinkedHashSet<>(issue.getLabels());
+
+        long epicProgressTotal =
+                issue.getIssueType() == IssueType.EPIC
+                        ? issueRepository.countByEpicId(issue.getId())
+                        : 0;
+
+        long epicProgressDone =
+                issue.getIssueType() == IssueType.EPIC
+                        ? issueRepository.countByEpicIdAndStatus(issue.getId(), IssueStatus.DONE)
+                        : 0;
 
         return new IssueResponse(
                 issue.getId(),
                 issue.getIssueKey(),
-                issue.getProject().getId(),
-                issue.getProject().getKey(),
+                issue.getProject() != null ? issue.getProject().getId() : null,
+                issue.getProject() != null ? issue.getProject().getKey() : null,
                 issue.getTitle(),
                 issue.getDescription(),
                 issue.getStatus(),
@@ -176,7 +261,7 @@ public class IssueService {
                 issue.getEpic() != null ? issue.getEpic().getId() : null,
                 issue.getEpic() != null ? issue.getEpic().getIssueKey() : null,
                 issue.getEpic() != null ? issue.getEpic().getTitle() : null,
-                issue.getLabels(),
+                labels,
                 epicProgressTotal,
                 epicProgressDone,
                 issue.getAssigneeId(),
@@ -184,7 +269,8 @@ public class IssueService {
                 issue.getCreatedAt(),
                 issue.getUpdatedAt(),
                 issue.getDeletedAt(),
-                comments);
+                comments
+        );
     }
 
     private String nextIssueKey(Project project) {
@@ -213,11 +299,18 @@ public class IssueService {
         if (query == null || query.isBlank()) {
             return true;
         }
+
         String needle = query.trim().toLowerCase(Locale.ROOT);
-        return issue.getIssueKey().toLowerCase(Locale.ROOT).contains(needle)
-                || issue.getTitle().toLowerCase(Locale.ROOT).contains(needle)
-                || issue.getDescription().toLowerCase(Locale.ROOT).contains(needle)
-                || issue.getProject().getKey().toLowerCase(Locale.ROOT).contains(needle);
+
+        return safe(issue.getIssueKey()).contains(needle)
+                || safe(issue.getTitle()).contains(needle)
+                || safe(issue.getDescription()).contains(needle)
+                || (issue.getProject() != null
+                && safe(issue.getProject().getKey()).contains(needle));
+    }
+
+    private String safe(String value) {
+        return value == null ? "" : value.toLowerCase(Locale.ROOT);
     }
 
     private Set<String> normalizeLabels(Set<String> labels) {
