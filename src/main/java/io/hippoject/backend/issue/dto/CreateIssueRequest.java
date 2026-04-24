@@ -9,20 +9,20 @@ import jakarta.validation.constraints.Size;
 import java.util.Set;
 
 public record CreateIssueRequest(
-        @NotBlank(message = "Issue title is required")
-        @Size(max = 140, message = "Issue title must be at most 140 characters")
+        @NotBlank(message = "Ein Vorgangstitel ist erforderlich")
+        @Size(max = 140, message = "Der Vorgangstitel darf höchstens 140 Zeichen lang sein")
         String title,
-        @NotBlank(message = "Issue description is required")
-        @Size(max = 2000, message = "Issue description must be at most 2000 characters")
+        @NotBlank(message = "Eine Vorgangsbeschreibung ist erforderlich")
+        @Size(max = 2000, message = "Die Vorgangsbeschreibung darf höchstens 2000 Zeichen lang sein")
         String description,
-        @NotNull(message = "Issue type is required")
+        @NotNull(message = "Ein Vorgangstyp ist erforderlich")
         IssueType issueType,
-        @NotNull(message = "Issue priority is required")
+        @NotNull(message = "Eine Priorität ist erforderlich")
         IssuePriority priority,
         IssueStatus status,
         Long sprintId,
         Long epicId,
         Set<String> labels,
-        @Size(max = 120, message = "Assignee id must be at most 120 characters")
+        @Size(max = 120, message = "Die Kennung der zuständigen Person darf höchstens 120 Zeichen lang sein")
         String assigneeId) {
 }

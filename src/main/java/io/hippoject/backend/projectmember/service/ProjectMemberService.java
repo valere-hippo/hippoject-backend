@@ -40,7 +40,7 @@ public class ProjectMemberService {
         Project project = projectService.findProject(projectId);
         String userId = request.userId().trim();
         if (projectMemberRepository.findByProjectIdAndUserIdIgnoreCase(projectId, userId).isPresent()) {
-            throw new ConflictException("Project member already exists: " + userId + " in project " + projectId);
+            throw new ConflictException("Das Projektmitglied existiert bereits: " + userId + " in Projekt " + projectId);
         }
 
         ProjectMember member = new ProjectMember(
@@ -51,15 +51,15 @@ public class ProjectMemberService {
                 request.role(),
                 Instant.now());
         ProjectMember savedMember = projectMemberRepository.save(member);
-        auditEventService.record(projectId, "MEMBER_ADDED", "Member added", savedMember.getDisplayName() + " joined as " + savedMember.getRole());
+        auditEventService.record(projectId, "MEMBER_ADDED", "Projektmitglied hinzugefügt", savedMember.getDisplayName() + " ist als " + savedMember.getRole() + " beigetreten");
         return toResponse(savedMember);
     }
 
     @Transactional
     public void removeMember(Long projectId, Long memberId) {
         ProjectMember member = projectMemberRepository.findByProjectIdAndId(projectId, memberId)
-                .orElseThrow(() -> new NotFoundException("Project member not found: " + memberId + " in project " + projectId));
-        auditEventService.record(projectId, "MEMBER_REMOVED", "Member removed", member.getDisplayName() + " was removed from the project");
+                .orElseThrow(() -> new NotFoundException("Projektmitglied nicht gefunden: " + memberId + " in Projekt " + projectId));
+        auditEventService.record(projectId, "MEMBER_REMOVED", "Projektmitglied entfernt", member.getDisplayName() + " wurde aus dem Projekt entfernt");
         projectMemberRepository.delete(member);
     }
 

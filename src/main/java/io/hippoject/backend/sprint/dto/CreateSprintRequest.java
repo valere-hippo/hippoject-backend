@@ -6,15 +6,15 @@ import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 
 public record CreateSprintRequest(
-        @NotBlank(message = "Sprint name is required")
-        @Size(max = 120, message = "Sprint name must be at most 120 characters")
+        @NotBlank(message = "Ein Sprint-Name ist erforderlich")
+        @Size(max = 120, message = "Der Sprint-Name darf höchstens 120 Zeichen lang sein")
         String name,
-        @NotBlank(message = "Sprint goal is required")
-        @Size(max = 1000, message = "Sprint goal must be at most 1000 characters")
+        @NotBlank(message = "Ein Sprint-Ziel ist erforderlich")
+        @Size(max = 1000, message = "Das Sprint-Ziel darf höchstens 1000 Zeichen lang sein")
         String goal,
-        @NotNull(message = "Sprint start date is required")
+        @NotNull(message = "Ein Startdatum ist erforderlich")
         LocalDate startsAt,
-        @NotNull(message = "Sprint end date is required")
+        @NotNull(message = "Ein Enddatum ist erforderlich")
         LocalDate endsAt,
         boolean active) {
 }

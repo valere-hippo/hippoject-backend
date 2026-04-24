@@ -4,7 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 public record CreateCommentRequest(
-        @NotBlank(message = "Comment body is required")
-        @Size(max = 2000, message = "Comment body must be at most 2000 characters")
+        @NotBlank(message = "Ein Kommentar ist erforderlich")
+        @Size(max = 2000, message = "Ein Kommentar darf höchstens 2000 Zeichen lang sein")
         String body) {
 }

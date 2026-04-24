@@ -45,7 +45,7 @@ public class CommentService {
         Comment comment = new Comment(issue, request.body().trim(), actorId(jwt), Instant.now());
         Comment savedComment = commentRepository.save(comment);
         notificationService.createMentionNotifications(savedComment);
-        auditEventService.record(projectId, "COMMENT_ADDED", "Comment added", savedComment.getAuthorId() + " commented on " + issue.getIssueKey());
+        auditEventService.record(projectId, "COMMENT_ADDED", "Kommentar hinzugefügt", savedComment.getAuthorId() + " hat " + issue.getIssueKey() + " kommentiert");
         return commentMapper.toResponse(savedComment);
     }
 

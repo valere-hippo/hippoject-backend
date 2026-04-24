@@ -35,7 +35,7 @@ public class ProjectService {
     public ProjectResponse createProject(CreateProjectRequest request, Jwt jwt) {
         String projectKey = request.key().trim().toUpperCase();
         if (projectRepository.existsByKeyIgnoreCase(projectKey)) {
-            throw new ConflictException("Project key already exists: " + projectKey);
+            throw new ConflictException("Der Projektschlüssel existiert bereits: " + projectKey);
         }
 
         String actorId = actorId(jwt);
@@ -49,7 +49,7 @@ public class ProjectService {
         ProjectMember ownerMember = new ProjectMember(savedProject, actorId, actorId, null, ProjectRole.PROJECT_ADMIN, Instant.now());
         savedProject.getMembers().add(ownerMember);
         projectMemberRepository.save(ownerMember);
-        auditEventService.record(savedProject.getId(), "PROJECT_CREATED", "Project created", savedProject.getName() + " was created by " + actorId);
+        auditEventService.record(savedProject.getId(), "PROJECT_CREATED", "Projekt erstellt", savedProject.getName() + " wurde von " + actorId + " erstellt");
         return toResponse(savedProject);
     }
 
@@ -69,7 +69,7 @@ public class ProjectService {
         Project project = findProject(projectId);
         project.setName(request.name().trim());
         project.setDescription(request.description().trim());
-        auditEventService.record(project.getId(), "PROJECT_UPDATED", "Project updated", project.getName() + " project settings were updated");
+        auditEventService.record(project.getId(), "PROJECT_UPDATED", "Projekt aktualisiert", "Die Projekteinstellungen von " + project.getName() + " wurden aktualisiert");
         return toResponse(project);
     }
 
@@ -77,7 +77,7 @@ public class ProjectService {
     public ProjectResponse archiveProject(Long projectId) {
         Project project = findProject(projectId);
         project.setDeletedAt(Instant.now());
-        auditEventService.record(project.getId(), "PROJECT_ARCHIVED", "Project archived", project.getName() + " was archived");
+        auditEventService.record(project.getId(), "PROJECT_ARCHIVED", "Projekt archiviert", project.getName() + " wurde archiviert");
         return toResponse(project);
     }
 
@@ -85,21 +85,21 @@ public class ProjectService {
     public ProjectResponse restoreProject(Long projectId) {
         Project project = findProjectIncludingArchived(projectId);
         project.setDeletedAt(null);
-        auditEventService.record(project.getId(), "PROJECT_RESTORED", "Project restored", project.getName() + " was restored");
+        auditEventService.record(project.getId(), "PROJECT_RESTORED", "Projekt wiederhergestellt", project.getName() + " wurde wiederhergestellt");
         return toResponse(project);
     }
 
     public Project findProject(Long projectId) {
         Project project = findProjectIncludingArchived(projectId);
         if (project.getDeletedAt() != null) {
-            throw new NotFoundException("Project not found: " + projectId);
+            throw new NotFoundException("Projekt nicht gefunden: " + projectId);
         }
         return project;
     }
 
     public Project findProjectIncludingArchived(Long projectId) {
         return projectRepository.findById(projectId)
-                .orElseThrow(() -> new NotFoundException("Project not found: " + projectId));
+                .orElseThrow(() -> new NotFoundException("Projekt nicht gefunden: " + projectId));
     }
 
     ProjectResponse toResponse(Project project) {

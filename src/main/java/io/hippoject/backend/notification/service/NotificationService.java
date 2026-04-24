@@ -45,7 +45,7 @@ public class NotificationService {
     @Transactional
     public NotificationResponse markRead(Long notificationId, Jwt jwt) {
         Notification notification = notificationRepository.findByIdAndRecipientId(notificationId, actorId(jwt))
-                .orElseThrow(() -> new NotFoundException("Notification not found: " + notificationId));
+                .orElseThrow(() -> new NotFoundException("Benachrichtigung nicht gefunden: " + notificationId));
         notification.setRead(true);
         realtimeEventService.broadcastNotificationsUpdated(notification.getRecipientId(), notification.getType());
         return toResponse(notification);
@@ -61,7 +61,7 @@ public class NotificationService {
                         "MENTION",
                         comment.getIssue().getProject().getId(),
                         comment.getIssue().getId(),
-                        comment.getAuthorId() + " mentioned you on " + comment.getIssue().getIssueKey(),
+                        comment.getAuthorId() + " hat dich in " + comment.getIssue().getIssueKey() + " erwähnt",
                         buildIssueUrl(comment.getIssue().getProject().getId(), comment.getIssue().getId())));
     }
 
@@ -96,7 +96,7 @@ public class NotificationService {
         realtimeEventService.broadcastNotificationsUpdated(recipientId, type);
         projectMemberRepository.findByProjectIdAndUserIdIgnoreCase(projectId, recipientId)
                 .map((member) -> member.getEmail())
-                .ifPresent((email) -> emailNotificationService.send(email, "Hippoject notification", message + "\n\nOpen: " + link));
+                .ifPresent((email) -> emailNotificationService.send(email, "Hippoject Benachrichtigung", message + "\n\nÖffnen: " + link));
     }
 
     private String buildIssueUrl(Long projectId, Long issueId) {
