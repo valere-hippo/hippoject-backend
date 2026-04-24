@@ -46,7 +46,7 @@ public class SavedFilterService {
     @Transactional
     public void deleteSavedFilter(Long filterId, Jwt jwt) {
         SavedFilter savedFilter = savedFilterRepository.findByIdAndOwnerId(filterId, actorId(jwt))
-                .orElseThrow(() -> new NotFoundException("Saved filter not found: " + filterId));
+                .orElseThrow(() -> new NotFoundException("Gespeicherter Filter nicht gefunden: " + filterId));
         savedFilterRepository.delete(savedFilter);
     }
 

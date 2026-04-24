@@ -58,7 +58,7 @@ public class SprintService {
                 Instant.now(),
                 null);
         Sprint savedSprint = sprintRepository.save(sprint);
-        auditEventService.record(projectId, "SPRINT_CREATED", "Sprint created", savedSprint.getName() + " was planned");
+        auditEventService.record(projectId, "SPRINT_CREATED", "Sprint erstellt", savedSprint.getName() + " wurde geplant");
         return toResponse(savedSprint);
     }
 
@@ -68,8 +68,8 @@ public class SprintService {
         deactivateActiveSprints(projectId);
         sprint.setActive(true);
         sprint.setCompletedAt(null);
-        auditEventService.record(projectId, "SPRINT_STARTED", "Sprint started", sprint.getName() + " is now active");
-        notificationService.notifyProjectMembers(sprint, sprint.getName() + " started");
+        auditEventService.record(projectId, "SPRINT_STARTED", "Sprint gestartet", sprint.getName() + " ist jetzt aktiv");
+        notificationService.notifyProjectMembers(sprint, sprint.getName() + " wurde gestartet");
         return toResponse(sprint);
     }
 
@@ -78,8 +78,8 @@ public class SprintService {
         Sprint sprint = findSprint(projectId, sprintId);
         sprint.setActive(false);
         sprint.setCompletedAt(Instant.now());
-        auditEventService.record(projectId, "SPRINT_COMPLETED", "Sprint completed", sprint.getName() + " was completed");
-        notificationService.notifyProjectMembers(sprint, sprint.getName() + " was completed");
+        auditEventService.record(projectId, "SPRINT_COMPLETED", "Sprint abgeschlossen", sprint.getName() + " wurde abgeschlossen");
+        notificationService.notifyProjectMembers(sprint, sprint.getName() + " wurde abgeschlossen");
         return toResponse(sprint);
     }
 
@@ -89,7 +89,7 @@ public class SprintService {
         issueRepository.findBySprintId(sprintId).forEach((issue) -> issue.setSprint(null));
         sprint.setActive(false);
         sprint.setDeletedAt(Instant.now());
-        auditEventService.record(projectId, "SPRINT_DELETED", "Sprint archived", sprint.getName() + " was archived");
+        auditEventService.record(projectId, "SPRINT_DELETED", "Sprint archiviert", sprint.getName() + " wurde archiviert");
         return toResponse(sprint);
     }
 
@@ -97,14 +97,14 @@ public class SprintService {
     public SprintResponse restoreSprint(Long projectId, Long sprintId) {
         Sprint sprint = findSprintIncludingDeleted(projectId, sprintId);
         sprint.setDeletedAt(null);
-        auditEventService.record(projectId, "SPRINT_RESTORED", "Sprint restored", sprint.getName() + " was restored");
+        auditEventService.record(projectId, "SPRINT_RESTORED", "Sprint wiederhergestellt", sprint.getName() + " wurde wiederhergestellt");
         return toResponse(sprint);
     }
 
     public Sprint findSprint(Long projectId, Long sprintId) {
         Sprint sprint = findSprintIncludingDeleted(projectId, sprintId);
         if (sprint.getDeletedAt() != null) {
-            throw new NotFoundException("Sprint not found: " + sprintId + " in project " + projectId);
+            throw new NotFoundException("Sprint nicht gefunden: " + sprintId + " in Projekt " + projectId);
         }
         return sprint;
     }
@@ -112,7 +112,7 @@ public class SprintService {
     public Sprint findSprintIncludingDeleted(Long projectId, Long sprintId) {
         projectService.findProject(projectId);
         return sprintRepository.findByProjectIdAndId(projectId, sprintId)
-                .orElseThrow(() -> new NotFoundException("Sprint not found: " + sprintId + " in project " + projectId));
+                .orElseThrow(() -> new NotFoundException("Sprint nicht gefunden: " + sprintId + " in Projekt " + projectId));
     }
 
     public Sprint resolveSprint(Long projectId, Long sprintId) {

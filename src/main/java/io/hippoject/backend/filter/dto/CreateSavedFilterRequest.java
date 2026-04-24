@@ -7,17 +7,17 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 public record CreateSavedFilterRequest(
-        @NotBlank(message = "Filter name is required")
-        @Size(max = 120, message = "Filter name must be at most 120 characters")
+        @NotBlank(message = "Ein Filtername ist erforderlich")
+        @Size(max = 120, message = "Der Filtername darf höchstens 120 Zeichen lang sein")
         String name,
-        @Size(max = 200, message = "Query must be at most 200 characters")
+        @Size(max = 200, message = "Die Suchanfrage darf höchstens 200 Zeichen lang sein")
         String query,
         Long projectId,
         IssueStatus status,
         IssueType issueType,
         IssuePriority priority,
-        @Size(max = 120, message = "Assignee id must be at most 120 characters")
+        @Size(max = 120, message = "Die Kennung der zuständigen Person darf höchstens 120 Zeichen lang sein")
         String assigneeId,
-        @Size(max = 50, message = "Label must be at most 50 characters")
+        @Size(max = 50, message = "Ein Label darf höchstens 50 Zeichen lang sein")
         String label) {
 }

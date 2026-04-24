@@ -69,8 +69,8 @@ public class IssueService {
                 normalizeLabels(request.labels()));
 
         Issue savedIssue = issueRepository.save(issue);
-        auditEventService.record(projectId, "ISSUE_CREATED", "Issue created", savedIssue.getIssueKey() + " · " + savedIssue.getTitle());
-        notificationService.notifyAssignee(savedIssue, savedIssue.getIssueKey() + " was assigned to you", actorId(jwt));
+        auditEventService.record(projectId, "ISSUE_CREATED", "Vorgang erstellt", savedIssue.getIssueKey() + " · " + savedIssue.getTitle());
+        notificationService.notifyAssignee(savedIssue, savedIssue.getIssueKey() + " wurde dir zugewiesen", actorId(jwt));
         return toResponse(savedIssue);
     }
 
@@ -114,9 +114,9 @@ public class IssueService {
         issue.setEpic(request.issueType() == IssueType.EPIC ? null : resolveEpic(projectId, request.epicId()));
         issue.setLabels(normalizeLabels(request.labels()));
         issue.setUpdatedAt(Instant.now());
-        auditEventService.record(projectId, "ISSUE_UPDATED", "Issue updated", issue.getIssueKey() + " moved to " + issue.getStatus());
+        auditEventService.record(projectId, "ISSUE_UPDATED", "Vorgang aktualisiert", issue.getIssueKey() + " wurde auf " + issue.getStatus() + " gesetzt");
         if (issue.getAssigneeId() != null && !issue.getAssigneeId().equalsIgnoreCase(previousAssigneeId != null ? previousAssigneeId : "")) {
-            notificationService.notifyAssignee(issue, issue.getIssueKey() + " was assigned to you", issue.getReporterId());
+            notificationService.notifyAssignee(issue, issue.getIssueKey() + " wurde dir zugewiesen", issue.getReporterId());
         }
         return toResponse(issue);
     }
@@ -127,7 +127,7 @@ public class IssueService {
         issueRepository.findByEpicId(issueId).forEach((child) -> child.setEpic(null));
         issue.setDeletedAt(Instant.now());
         issue.setSprint(null);
-        auditEventService.record(projectId, "ISSUE_DELETED", "Issue archived", issue.getIssueKey() + " was archived");
+        auditEventService.record(projectId, "ISSUE_DELETED", "Vorgang archiviert", issue.getIssueKey() + " wurde archiviert");
         return toResponse(issue);
     }
 
@@ -136,14 +136,14 @@ public class IssueService {
         Issue issue = findIssueIncludingDeleted(projectId, issueId);
         issue.setDeletedAt(null);
         issue.setUpdatedAt(Instant.now());
-        auditEventService.record(projectId, "ISSUE_RESTORED", "Issue restored", issue.getIssueKey() + " was restored");
+        auditEventService.record(projectId, "ISSUE_RESTORED", "Vorgang wiederhergestellt", issue.getIssueKey() + " wurde wiederhergestellt");
         return toResponse(issue);
     }
 
     public Issue findIssue(Long projectId, Long issueId) {
         Issue issue = findIssueIncludingDeleted(projectId, issueId);
         if (issue.getDeletedAt() != null) {
-            throw new NotFoundException("Issue not found: " + issueId + " in project " + projectId);
+            throw new NotFoundException("Vorgang nicht gefunden: " + issueId + " in Projekt " + projectId);
         }
         return issue;
     }
@@ -151,7 +151,7 @@ public class IssueService {
     public Issue findIssueIncludingDeleted(Long projectId, Long issueId) {
         projectService.findProject(projectId);
         return issueRepository.findByProjectIdAndId(projectId, issueId)
-                .orElseThrow(() -> new NotFoundException("Issue not found: " + issueId + " in project " + projectId));
+                .orElseThrow(() -> new NotFoundException("Vorgang nicht gefunden: " + issueId + " in Projekt " + projectId));
     }
 
     public IssueResponse toResponse(Issue issue) {
@@ -237,7 +237,7 @@ public class IssueService {
         }
         Issue epic = findIssue(projectId, epicId);
         if (epic.getIssueType() != IssueType.EPIC) {
-            throw new NotFoundException("Epic not found: " + epicId + " in project " + projectId);
+            throw new NotFoundException("Epic nicht gefunden: " + epicId + " in Projekt " + projectId);
         }
         return epic;
     }
