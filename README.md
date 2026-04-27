@@ -99,10 +99,11 @@ A GitHub Actions workflow is included in `.github/workflows/deploy.yml`.
 
 Expected repository secrets:
 
-- `DEPLOY_HOST`
-- `DEPLOY_USER`
-- `DEPLOY_SSH_KEY`
 - `DEPLOY_PATH` pointing to the checked-out `hippoject-infra` directory on the server
+- `GHCR_USERNAME`
+- `GHCR_TOKEN`
+
+The deploy job is designed for a **self-hosted GitHub Actions runner** on the server, so no SSH deploy key is needed.
 
 ## Notes
 

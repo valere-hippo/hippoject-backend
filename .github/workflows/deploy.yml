@@ -11,7 +11,7 @@ permissions:
   packages: write
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -48,13 +48,16 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/hippoject-backend:latest
             ghcr.io/${{ github.repository_owner }}/hippoject-backend:${{ github.sha }}
 
-      - name: Deploy on server
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          script: |
-            cd ${{ secrets.DEPLOY_PATH }}
-            docker compose --env-file .env.production -f compose.production.yml pull backend
-            docker compose --env-file .env.production -f compose.production.yml up -d backend
+  deploy:
+    needs: build
+    runs-on: [self-hosted, Linux, X64, hippoject-prod]
+
+    steps:
+      - name: Log in to GHCR for pull
+        run: echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
+
+      - name: Pull and restart backend
+        run: |
+          cd "${{ secrets.DEPLOY_PATH }}"
+          docker compose --env-file .env.production -f compose.production.yml pull backend
+          docker compose --env-file .env.production -f compose.production.yml up -d backend
