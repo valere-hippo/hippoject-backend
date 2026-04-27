@@ -38,6 +38,15 @@ The backend currently provides:
 
 - `SECURITY_ENABLED=false` for local unsecured dev
 - `JWT_JWK_SET_URI` for Keycloak / JWT validation when security is enabled
+- `CORS_ALLOWED_ORIGIN_PATTERNS` for frontend origins, comma-separated
+
+### Keycloak integration
+
+- `KEYCLOAK_URL`
+- `KEYCLOAK_REALM`
+- `KEYCLOAK_ADMIN_USERNAME`
+- `KEYCLOAK_ADMIN_PASSWORD`
+- `APP_FRONTEND_URL`
 
 ### Email notifications
 
@@ -66,8 +75,37 @@ Default local expectations:
 ./mvnw test
 ```
 
+## Docker
+
+Build local image:
+
+```bash
+docker build -t hippoject-backend:local .
+```
+
+Run local container:
+
+```bash
+docker run --rm -p 8080:8080 \
+  -e DATABASE_URL=jdbc:postgresql://host.docker.internal:5432/hippoject \
+  -e DATABASE_USERNAME=hippoject \
+  -e DATABASE_PASSWORD=hippoject \
+  hippoject-backend:local
+```
+
+## CI/CD
+
+A GitHub Actions workflow is included in `.github/workflows/deploy.yml`.
+
+Expected repository secrets:
+
+- `DEPLOY_HOST`
+- `DEPLOY_USER`
+- `DEPLOY_SSH_KEY`
+- `DEPLOY_PATH` pointing to the checked-out `hippoject-infra` directory on the server
+
 ## Notes
 
 - Flyway manages the database schema.
 - Local compilation needs a full Java 21 JDK toolchain.
-- In this workspace, frontend builds were used as the main fast sanity check because the local Java toolchain was incomplete for full Maven verification.
+- Production reverse proxy support is enabled with `server.forward-headers-strategy=framework`.
