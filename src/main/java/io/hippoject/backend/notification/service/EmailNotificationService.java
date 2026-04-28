@@ -1,5 +1,6 @@
 package io.hippoject.backend.notification.service;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -8,7 +9,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class EmailNotificationService {
 
-    private final JavaMailSender mailSender;
+    private final ObjectProvider<JavaMailSender> mailSenderProvider;
 
     @Value("${app.notifications.email-enabled:false}")
     private boolean emailEnabled;
@@ -16,12 +17,13 @@ public class EmailNotificationService {
     @Value("${app.notifications.from:}")
     private String fromAddress;
 
-    public EmailNotificationService(JavaMailSender mailSender) {
-        this.mailSender = mailSender;
+    public EmailNotificationService(ObjectProvider<JavaMailSender> mailSenderProvider) {
+        this.mailSenderProvider = mailSenderProvider;
     }
 
     public void send(String to, String subject, String body) {
-        if (!emailEnabled || to == null || to.isBlank()) {
+        JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
+        if (!emailEnabled || to == null || to.isBlank() || mailSender == null) {
             return;
         }
         SimpleMailMessage message = new SimpleMailMessage();
