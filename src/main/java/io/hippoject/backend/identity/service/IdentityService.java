@@ -4,9 +4,12 @@ import io.hippoject.backend.common.exception.ConflictException;
 import io.hippoject.backend.common.exception.NotFoundException;
 import io.hippoject.backend.identity.dto.CreateIdentityUserRequest;
 import io.hippoject.backend.identity.dto.IdentityUserResponse;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -24,6 +27,12 @@ import org.springframework.web.util.UriUtils;
 public class IdentityService {
 
     private static final List<String> INVITE_ACTIONS = List.of("VERIFY_EMAIL", "UPDATE_PASSWORD");
+    private static final List<String> MANAGEABLE_REALM_ROLES = List.of(
+            "hippoject-admin",
+            "project-admin",
+            "project-manager",
+            "developer",
+            "reporter");
 
     private final RestClient restClient;
     private final String keycloakUrl;
@@ -59,7 +68,7 @@ public class IdentityService {
         String token = adminAccessToken();
         String url = keycloakUrl + "/admin/realms/" + realm + "/users?max=200";
         if (query != null && !query.isBlank()) {
-            url += "&search=" + UriUtils.encodeQueryParam(query.trim(), java.nio.charset.StandardCharsets.UTF_8);
+            url += "&search=" + UriUtils.encodeQueryParam(query.trim(), StandardCharsets.UTF_8);
         }
 
         KeycloakUserRepresentation[] users = restClient.get()
@@ -75,7 +84,7 @@ public class IdentityService {
 
         return Arrays.stream(users)
                 .filter((user) -> Boolean.TRUE.equals(user.enabled()))
-                .map(this::toResponse)
+                .map((user) -> toResponse(token, user))
                 .sorted((left, right) -> left.displayName().compareToIgnoreCase(right.displayName()))
                 .toList();
     }
@@ -106,11 +115,12 @@ public class IdentityService {
 
             String userId = extractUserId(response.getHeaders().getFirst(HttpHeaders.LOCATION));
             try {
+                assignRealmRoles(token, userId, normalizeRealmRoles(request.realmRoles()));
                 sendInviteEmail(token, userId);
                 return getUser(token, userId);
             } catch (RuntimeException exception) {
                 deleteUser(token, userId);
-                throw new IllegalStateException("Der Benutzer wurde angelegt, aber die Einladungs-E-Mail konnte nicht versendet werden", exception);
+                throw new IllegalStateException("Der Benutzer wurde angelegt, aber Rollen oder Einladung konnten nicht vollständig eingerichtet werden", exception);
             }
         } catch (RestClientResponseException exception) {
             if (exception.getStatusCode().value() == 409) {
@@ -120,13 +130,20 @@ public class IdentityService {
         }
     }
 
+    @Transactional
+    public IdentityUserResponse updateUserRoles(String userId, List<String> realmRoles) {
+        String token = adminAccessToken();
+        assignRealmRoles(token, userId, normalizeRealmRoles(realmRoles));
+        return getUser(token, userId);
+    }
+
     private void sendInviteEmail(String token, String userId) {
         restClient.put()
                 .uri(keycloakUrl + "/admin/realms/" + realm + "/users/" + userId
                         + "/execute-actions-email?client_id="
-                        + UriUtils.encodeQueryParam(frontendClientId, java.nio.charset.StandardCharsets.UTF_8)
+                        + UriUtils.encodeQueryParam(frontendClientId, StandardCharsets.UTF_8)
                         + "&redirect_uri="
-                        + UriUtils.encodeQueryParam(frontendRedirectUri, java.nio.charset.StandardCharsets.UTF_8))
+                        + UriUtils.encodeQueryParam(frontendRedirectUri, StandardCharsets.UTF_8))
                 .header(HttpHeaders.AUTHORIZATION, bearer(token))
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(INVITE_ACTIONS)
@@ -145,7 +162,7 @@ public class IdentityService {
         if (user == null) {
             throw new NotFoundException("Benutzer in Keycloak nicht gefunden: " + userId);
         }
-        return toResponse(user);
+        return toResponse(token, user);
     }
 
     private void deleteUser(String token, String userId) {
@@ -156,12 +173,13 @@ public class IdentityService {
                 .toBodilessEntity();
     }
 
-    private IdentityUserResponse toResponse(KeycloakUserRepresentation user) {
+    private IdentityUserResponse toResponse(String token, KeycloakUserRepresentation user) {
         String firstName = trimToNull(user.firstName());
         String lastName = trimToNull(user.lastName());
         String displayName = firstName != null || lastName != null
                 ? ((firstName != null ? firstName : "") + " " + (lastName != null ? lastName : "")).trim()
                 : user.username();
+        List<String> realmRoles = loadUserRealmRoles(token, user.id());
 
         return new IdentityUserResponse(
                 user.id(),
@@ -171,7 +189,116 @@ public class IdentityService {
                 lastName,
                 displayName,
                 Boolean.TRUE.equals(user.emailVerified()),
-                Boolean.TRUE.equals(user.enabled()));
+                Boolean.TRUE.equals(user.enabled()),
+                realmRoles);
+    }
+
+    private List<String> loadUserRealmRoles(String token, String userId) {
+        KeycloakRoleRepresentation[] roles = restClient.get()
+                .uri(keycloakUrl + "/admin/realms/" + realm + "/users/" + userId + "/role-mappings/realm")
+                .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                .accept(MediaType.APPLICATION_JSON)
+                .retrieve()
+                .body(KeycloakRoleRepresentation[].class);
+
+        if (roles == null) {
+            return List.of();
+        }
+
+        return Arrays.stream(roles)
+                .map(KeycloakRoleRepresentation::name)
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(MANAGEABLE_REALM_ROLES::contains)
+                .sorted(Comparator.comparingInt(MANAGEABLE_REALM_ROLES::indexOf))
+                .toList();
+    }
+
+    private void assignRealmRoles(String token, String userId, List<String> desiredRoleNames) {
+        List<KeycloakRoleRepresentation> currentRoles = loadUserRealmRoleRepresentations(token, userId);
+        List<KeycloakRoleRepresentation> currentManageableRoles = currentRoles.stream()
+                .filter(role -> role.name() != null && MANAGEABLE_REALM_ROLES.contains(role.name()))
+                .toList();
+
+        List<KeycloakRoleRepresentation> rolesToRemove = currentManageableRoles.stream()
+                .filter(role -> !desiredRoleNames.contains(role.name()))
+                .toList();
+        if (!rolesToRemove.isEmpty()) {
+            restClient.method(org.springframework.http.HttpMethod.DELETE)
+                    .uri(keycloakUrl + "/admin/realms/" + realm + "/users/" + userId + "/role-mappings/realm")
+                    .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(rolesToRemove)
+                    .retrieve()
+                    .toBodilessEntity();
+        }
+
+        List<String> currentRoleNames = currentManageableRoles.stream()
+                .map(KeycloakRoleRepresentation::name)
+                .filter(Objects::nonNull)
+                .toList();
+        List<KeycloakRoleRepresentation> rolesToAdd = desiredRoleNames.stream()
+                .filter(roleName -> !currentRoleNames.contains(roleName))
+                .map(roleName -> getRealmRole(token, roleName))
+                .toList();
+        if (!rolesToAdd.isEmpty()) {
+            restClient.post()
+                    .uri(keycloakUrl + "/admin/realms/" + realm + "/users/" + userId + "/role-mappings/realm")
+                    .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(rolesToAdd)
+                    .retrieve()
+                    .toBodilessEntity();
+        }
+    }
+
+    private List<KeycloakRoleRepresentation> loadUserRealmRoleRepresentations(String token, String userId) {
+        KeycloakRoleRepresentation[] roles = restClient.get()
+                .uri(keycloakUrl + "/admin/realms/" + realm + "/users/" + userId + "/role-mappings/realm")
+                .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                .accept(MediaType.APPLICATION_JSON)
+                .retrieve()
+                .body(KeycloakRoleRepresentation[].class);
+
+        return roles == null ? List.of() : Arrays.asList(roles);
+    }
+
+    private KeycloakRoleRepresentation getRealmRole(String token, String roleName) {
+        if (!MANAGEABLE_REALM_ROLES.contains(roleName)) {
+            throw new IllegalArgumentException("Unbekannte Rolle: " + roleName);
+        }
+
+        KeycloakRoleRepresentation role = restClient.get()
+                .uri(keycloakUrl + "/admin/realms/" + realm + "/roles/" + UriUtils.encodePathSegment(roleName, StandardCharsets.UTF_8))
+                .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                .accept(MediaType.APPLICATION_JSON)
+                .retrieve()
+                .body(KeycloakRoleRepresentation.class);
+
+        if (role == null || role.name() == null || role.id() == null) {
+            throw new NotFoundException("Keycloak-Rolle nicht gefunden: " + roleName);
+        }
+        return role;
+    }
+
+    private List<String> normalizeRealmRoles(List<String> realmRoles) {
+        if (realmRoles == null || realmRoles.isEmpty()) {
+            throw new IllegalArgumentException("Mindestens eine Rolle ist erforderlich");
+        }
+
+        List<String> normalizedRoles = realmRoles.stream()
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(MANAGEABLE_REALM_ROLES::contains)
+                .distinct()
+                .sorted(Comparator.comparingInt(MANAGEABLE_REALM_ROLES::indexOf))
+                .toList();
+
+        if (normalizedRoles.isEmpty()) {
+            throw new IllegalArgumentException("Mindestens eine gültige Rolle ist erforderlich");
+        }
+
+        return normalizedRoles;
     }
 
     private String adminAccessToken() {
@@ -235,6 +362,15 @@ public class IdentityService {
             String lastName,
             Boolean emailVerified,
             Boolean enabled) {
+    }
+
+    private record KeycloakRoleRepresentation(
+            String id,
+            String name,
+            String description,
+            boolean composite,
+            boolean clientRole,
+            String containerId) {
     }
 
     private record CreateKeycloakUserRequest(

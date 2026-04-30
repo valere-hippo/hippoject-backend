@@ -1,8 +1,10 @@
 package io.hippoject.backend.identity.dto;
 
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import java.util.List;
 
 public record CreateIdentityUserRequest(
         @NotBlank(message = "Ein Benutzername ist erforderlich")
@@ -17,5 +19,7 @@ public record CreateIdentityUserRequest(
         String firstName,
         @NotBlank(message = "Ein Nachname ist erforderlich")
         @Size(max = 120, message = "Der Nachname darf höchstens 120 Zeichen lang sein")
-        String lastName) {
+        String lastName,
+        @NotNull(message = "Mindestens eine Rolle ist erforderlich")
+        List<String> realmRoles) {
 }

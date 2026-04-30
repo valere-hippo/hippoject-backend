@@ -2,6 +2,7 @@ package io.hippoject.backend.identity.api;
 
 import io.hippoject.backend.identity.dto.CreateIdentityUserRequest;
 import io.hippoject.backend.identity.dto.IdentityUserResponse;
+import io.hippoject.backend.identity.dto.UpdateIdentityUserRolesRequest;
 import io.hippoject.backend.identity.service.IdentityService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -14,6 +15,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 
 @RestController
 @RequestMapping("/api/identity/users")
@@ -36,5 +39,11 @@ public class IdentityController {
     @PreAuthorize("@roleGuard.hasAnyRole(authentication, 'hippoject-admin', 'project-admin', 'project-manager')")
     public IdentityUserResponse inviteUser(@Valid @RequestBody CreateIdentityUserRequest request) {
         return identityService.inviteUser(request);
+    }
+
+    @PutMapping("/{userId}/roles")
+    @PreAuthorize("@roleGuard.hasAnyRole(authentication, 'hippoject-admin', 'project-admin', 'project-manager')")
+    public IdentityUserResponse updateUserRoles(@PathVariable String userId, @Valid @RequestBody UpdateIdentityUserRolesRequest request) {
+        return identityService.updateUserRoles(userId, request.realmRoles());
     }
 }

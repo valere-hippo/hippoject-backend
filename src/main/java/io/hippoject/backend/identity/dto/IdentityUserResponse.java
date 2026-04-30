@@ -1,5 +1,7 @@
 package io.hippoject.backend.identity.dto;
 
+import java.util.List;
+
 public record IdentityUserResponse(
         String id,
         String username,
@@ -8,5 +10,6 @@ public record IdentityUserResponse(
         String lastName,
         String displayName,
         boolean emailVerified,
-        boolean enabled) {
+        boolean enabled,
+        List<String> realmRoles) {
 }

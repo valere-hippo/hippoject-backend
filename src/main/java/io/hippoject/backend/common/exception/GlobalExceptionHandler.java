@@ -50,7 +50,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AccessDeniedException.class)
     ResponseEntity<ApiErrorResponse> handleForbidden(AccessDeniedException exception, HttpServletRequest request) {
-        return build(HttpStatus.FORBIDDEN, exception.getMessage(), request);
+        String message = exception.getMessage();
+        if (message == null || message.isBlank() || "Access Denied".equalsIgnoreCase(message)) {
+            message = "Berechtigung nicht ausreichend";
+        }
+        return build(HttpStatus.FORBIDDEN, message, request);
     }
 
     @ExceptionHandler(Exception.class)
