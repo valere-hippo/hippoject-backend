@@ -36,6 +36,10 @@ public class RealtimeEventService {
         broadcast("notifications-updated", Map.of("recipientId", recipientId, "notificationType", notificationType));
     }
 
+    public void broadcastProjectChatMessage(Long projectId) {
+        broadcast("project-chat-message", Map.of("projectId", projectId));
+    }
+
     private void broadcast(String eventType, Object payload) {
         String message = toJson(Map.of("type", eventType, "payload", payload));
         sessions.forEach((session) -> send(session, message));
