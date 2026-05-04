@@ -9,6 +9,7 @@ public record IdentityUserResponse(
         String firstName,
         String lastName,
         String displayName,
+        String avatarUrl,
         boolean emailVerified,
         boolean enabled,
         List<String> realmRoles) {

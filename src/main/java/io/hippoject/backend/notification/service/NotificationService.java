@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,12 +29,19 @@ public class NotificationService {
     private final ProjectMemberRepository projectMemberRepository;
     private final EmailNotificationService emailNotificationService;
     private final RealtimeEventService realtimeEventService;
+    private final String frontendBaseUrl;
 
-    public NotificationService(NotificationRepository notificationRepository, ProjectMemberRepository projectMemberRepository, EmailNotificationService emailNotificationService, RealtimeEventService realtimeEventService) {
+    public NotificationService(
+            NotificationRepository notificationRepository,
+            ProjectMemberRepository projectMemberRepository,
+            EmailNotificationService emailNotificationService,
+            RealtimeEventService realtimeEventService,
+            @Value("${app.keycloak.frontend-redirect-uri:http://localhost:4200}") String frontendBaseUrl) {
         this.notificationRepository = notificationRepository;
         this.projectMemberRepository = projectMemberRepository;
         this.emailNotificationService = emailNotificationService;
         this.realtimeEventService = realtimeEventService;
+        this.frontendBaseUrl = frontendBaseUrl;
     }
 
     public List<NotificationResponse> listNotifications(Jwt jwt) {
@@ -54,15 +62,24 @@ public class NotificationService {
     @Transactional
     public void createMentionNotifications(Comment comment) {
         Set<String> mentions = extractMentions(comment.getBody());
+        String authorDisplayName = projectMemberRepository
+                .findByProjectIdAndUserIdIgnoreCase(comment.getIssue().getProject().getId(), comment.getAuthorId())
+                .map((member) -> member.getDisplayName() != null && !member.getDisplayName().isBlank() ? member.getDisplayName() : member.getUserId())
+                .orElse(comment.getAuthorId());
+        String issueLink = buildIssueUrl(comment.getIssue().getProject().getId(), comment.getIssue().getId());
+        String mentionMessage = buildMentionMessage(authorDisplayName, comment);
+
         mentions.stream()
                 .filter((recipientId) -> !recipientId.equalsIgnoreCase(comment.getAuthorId()))
-                .forEach((recipientId) -> saveAndDispatch(
-                        recipientId,
+                .map((recipientId) -> projectMemberRepository.findByProjectIdAndUserIdIgnoreCase(comment.getIssue().getProject().getId(), recipientId).orElse(null))
+                .filter(java.util.Objects::nonNull)
+                .forEach((recipient) -> saveAndDispatch(
+                        recipient.getUserId(),
                         "MENTION",
                         comment.getIssue().getProject().getId(),
                         comment.getIssue().getId(),
-                        comment.getAuthorId() + " hat dich in " + comment.getIssue().getIssueKey() + " erwähnt",
-                        buildIssueUrl(comment.getIssue().getProject().getId(), comment.getIssue().getId())));
+                        mentionMessage,
+                        issueLink));
     }
 
     @Transactional
@@ -100,7 +117,20 @@ public class NotificationService {
     }
 
     private String buildIssueUrl(Long projectId, Long issueId) {
-        return "/projects/" + projectId + "/issues/" + issueId;
+        String baseUrl = frontendBaseUrl.endsWith("/") ? frontendBaseUrl.substring(0, frontendBaseUrl.length() - 1) : frontendBaseUrl;
+        return baseUrl + "/projects/" + projectId + "/issues/" + issueId;
+    }
+
+    private String buildMentionMessage(String authorDisplayName, Comment comment) {
+        String preview = abbreviate(comment.getBody().replaceAll("\\s+", " ").trim(), 96);
+        return authorDisplayName + " hat dich in „" + comment.getIssue().getIssueKey() + " · " + comment.getIssue().getTitle() + "“ erwähnt: „" + preview + "“";
+    }
+
+    private String abbreviate(String value, int maxLength) {
+        if (value == null || value.length() <= maxLength) {
+            return value;
+        }
+        return value.substring(0, Math.max(0, maxLength - 1)).trim() + "…";
     }
 
     private Set<String> extractMentions(String body) {

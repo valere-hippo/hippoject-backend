@@ -9,11 +9,13 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.LinkedMultiValueMap;
@@ -137,6 +139,38 @@ public class IdentityService {
         return getUser(token, userId);
     }
 
+    public IdentityUserResponse currentUser(Jwt jwt) {
+        if (jwt == null) {
+            return localDevUser();
+        }
+        return getUser(adminAccessToken(), actorKeycloakId(jwt));
+    }
+
+    @Transactional
+    public IdentityUserResponse updateCurrentUserProfile(String avatarUrl, Jwt jwt) {
+        if (jwt == null) {
+            return localDevUser();
+        }
+        String token = adminAccessToken();
+        String userId = actorKeycloakId(jwt);
+        updateUserProfile(token, userId, avatarUrl);
+        return getUser(token, userId);
+    }
+
+    private IdentityUserResponse localDevUser() {
+        return new IdentityUserResponse(
+                "local-dev",
+                "local-dev",
+                "local-dev@hippoject.local",
+                "Local",
+                "Dev",
+                "Local Dev",
+                null,
+                true,
+                true,
+                List.of("hippoject-admin"));
+    }
+
     private void sendInviteEmail(String token, String userId) {
         restClient.put()
                 .uri(keycloakUrl + "/admin/realms/" + realm + "/users/" + userId
@@ -188,9 +222,38 @@ public class IdentityService {
                 firstName,
                 lastName,
                 displayName,
+                avatarUrl(user.attributes()),
                 Boolean.TRUE.equals(user.emailVerified()),
                 Boolean.TRUE.equals(user.enabled()),
                 realmRoles);
+    }
+
+    private void updateUserProfile(String token, String userId, String avatarUrl) {
+        KeycloakUserRepresentation currentUser = restClient.get()
+                .uri(keycloakUrl + "/admin/realms/" + realm + "/users/" + userId)
+                .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                .accept(MediaType.APPLICATION_JSON)
+                .retrieve()
+                .body(KeycloakUserRepresentation.class);
+
+        if (currentUser == null) {
+            throw new NotFoundException("Benutzer in Keycloak nicht gefunden: " + userId);
+        }
+
+        restClient.put()
+                .uri(keycloakUrl + "/admin/realms/" + realm + "/users/" + userId)
+                .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new UpdateKeycloakUserRequest(
+                        currentUser.username(),
+                        currentUser.email(),
+                        currentUser.firstName(),
+                        currentUser.lastName(),
+                        Boolean.TRUE.equals(currentUser.enabled()),
+                        Boolean.TRUE.equals(currentUser.emailVerified()),
+                        withAvatar(currentUser.attributes(), avatarUrl)))
+                .retrieve()
+                .toBodilessEntity();
     }
 
     private List<String> loadUserRealmRoles(String token, String userId) {
@@ -337,6 +400,40 @@ public class IdentityService {
         return "Bearer " + token;
     }
 
+    private String actorKeycloakId(Jwt jwt) {
+        String subject = jwt != null ? trimToNull(jwt.getSubject()) : null;
+        if (subject == null) {
+            throw new IllegalStateException("Aktueller Benutzer konnte nicht aus dem Token ermittelt werden");
+        }
+        return subject;
+    }
+
+    private Map<String, List<String>> withAvatar(Map<String, List<String>> attributes, String avatarUrl) {
+        java.util.LinkedHashMap<String, List<String>> updated = new java.util.LinkedHashMap<>();
+        if (attributes != null) {
+            updated.putAll(attributes);
+        }
+
+        String normalizedAvatarUrl = trimToNull(avatarUrl);
+        if (normalizedAvatarUrl == null) {
+            updated.remove("avatarUrl");
+        } else {
+            updated.put("avatarUrl", List.of(normalizedAvatarUrl));
+        }
+        return updated;
+    }
+
+    private String avatarUrl(Map<String, List<String>> attributes) {
+        if (attributes == null) {
+            return null;
+        }
+        List<String> values = attributes.get("avatarUrl");
+        if (values == null || values.isEmpty()) {
+            return null;
+        }
+        return trimToNull(values.getFirst());
+    }
+
     private String trimTrailingSlash(String value) {
         return value != null && value.endsWith("/") ? value.substring(0, value.length() - 1) : value;
     }
@@ -361,7 +458,8 @@ public class IdentityService {
             String firstName,
             String lastName,
             Boolean emailVerified,
-            Boolean enabled) {
+            Boolean enabled,
+            Map<String, List<String>> attributes) {
     }
 
     private record KeycloakRoleRepresentation(
@@ -381,5 +479,15 @@ public class IdentityService {
             boolean enabled,
             boolean emailVerified,
             List<String> requiredActions) {
+    }
+
+    private record UpdateKeycloakUserRequest(
+            String username,
+            String email,
+            String firstName,
+            String lastName,
+            boolean enabled,
+            boolean emailVerified,
+            Map<String, List<String>> attributes) {
     }
 }
